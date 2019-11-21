@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
      name='nrn-glia',
-     version='0.0.1-a1',
+     version='0.0.1-a2',
      author="Robin De Schepper",
      author_email="robingilbert.deschepper@unipv.it",
      description="Package manager for NEURON",
