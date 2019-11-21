@@ -18,5 +18,5 @@ def glia_cli():
         cl_args.func(cl_args)
 
 def install_package(args):
-    import subprocess, sys
+    import subprocess
     subprocess.call([sys.executable, "-m", "pip", "install", args.command])
