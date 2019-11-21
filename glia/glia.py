@@ -25,7 +25,7 @@ class Glia:
         return os.path.exists(Glia.path(".glia"))
 
     def _install_self(self):
-        print("Hi! You seem to be running Glia for the first time. Please wait while we glue your neurons together...")
+        print("Please wait while Glia glues your neurons together...")
         self._mkdir(".glia")
         self._mkdir(".neuron")
         self._mkdir(".neuron", "mod")

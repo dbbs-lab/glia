@@ -6,7 +6,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
      name='nrn-glia',
-     version='0.0.1-a4',
+     version='0.0.1-a5',
      author="Robin De Schepper",
      author_email="robingilbert.deschepper@unipv.it",
      description="Package manager for NEURON",
@@ -18,5 +18,10 @@ setuptools.setup(
      classifiers=[
          "Programming Language :: Python :: 3",
          "Operating System :: OS Independent",
-     ]
+     ],
+     entry_points={
+        'console_scripts': [
+            'glia = glia.cli:glia_cli'
+        ]
+     },
  )
