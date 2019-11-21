@@ -1,11 +1,12 @@
-import setuptools
+import setuptools, os
+from setuptools.command.install import install
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
      name='nrn-glia',
-     version='0.0.1-a2',
+     version='0.0.1-a4',
      author="Robin De Schepper",
      author_email="robingilbert.deschepper@unipv.it",
      description="Package manager for NEURON",
@@ -17,5 +18,5 @@ setuptools.setup(
      classifiers=[
          "Programming Language :: Python :: 3",
          "Operating System :: OS Independent",
-     ],
+     ]
  )

@@ -1,17 +1,20 @@
-import os, warnings
+import os
 glia_path = os.path.dirname(__file__)
 os.environ["GLIA_PATH"] = glia_path
-from .glia import Glia
-
-glia = Glia()
-
 try:
     import neuron
+    os.environ["GLIA_NRN_AVAILABLE"] = "1"
 except Exception as e:
-    raise Exception("Could not load neuron.") from None
+    os.environ["GLIA_NRN_AVAILABLE"] = "0"
 
-if not os.path.exists(Glia.path(".glia")):
-    print("No install found.")
-    glia.install()
+
+from .glia import Glia
+manager = Glia()
+
+if not manager._is_installed():
+    manager._install_self()
+
+if os.getenv("GLIA_NRN_AVAILABLE") == "0":
+    raise Exception("Cannot start Glia without NEURON installed.")
 else:
-    print("Glia installed")
+    manager.start()
