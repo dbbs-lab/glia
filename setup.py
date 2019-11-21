@@ -1,5 +1,4 @@
 import setuptools, os
-from setuptools.command.install import install
 
 with open("README.md", "r") as fh:
     long_description = fh.read()

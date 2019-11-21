@@ -9,4 +9,6 @@ def glia_cli():
     # imported, and glia installs itself on first import.
     install_self_parser.set_defaults(func=lambda: None)
 
-    parser.parse_args()
+    cl_args = parser.parse_args()
+    if hasattr(cl_args, 'func'):
+        cl_args.func(cl_args)
