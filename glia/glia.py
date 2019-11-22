@@ -79,7 +79,7 @@ class Glia:
         self._compiled = process.returncode == 0
         os.chdir(current_dir)
         if process.returncode != 0:
-            raise CompileError("during NEURON compilation:\n" + stderr.decode('UTF-8'))
+            raise CompileError(stderr.decode('UTF-8'))
 
     def _compile_linux(self, neuron_mod_path):
         current_dir = os.getcwd()
@@ -91,7 +91,7 @@ class Glia:
         self._compiled = process.returncode == 0
         os.chdir(current_dir)
         if process.returncode != 0:
-            raise CompileError("during NEURON compilation:\n" + stderr.decode('UTF-8'))
+            raise CompileError(stderr.decode('UTF-8'))
 
     def install(self, command):
         subprocess.call([sys.executable, "-m", "pip", "install", command])
