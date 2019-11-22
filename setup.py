@@ -1,11 +1,15 @@
 import setuptools, os
+os.environ["GLIA_NO_INSTALL"] = "1"
+import glia
+
+print("Packaging glia version", glia.__version__)
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
      name='nrn-glia',
-     version='0.0.1-a5',
+     version=glia.__version__,
      author="Robin De Schepper",
      author_email="robingilbert.deschepper@unipv.it",
      description="Package manager for NEURON",
