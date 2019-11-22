@@ -9,12 +9,17 @@ except Exception as e:
 
 
 from .glia import Glia
+from .exceptions import GliaError
 manager = Glia()
 
-if not manager._is_installed():
-    manager._install_self()
+try:
+    if not manager._is_installed():
+            manager._install_self()
 
-if os.getenv("GLIA_NRN_AVAILABLE") == "0":
-    raise Exception("Cannot start Glia without NEURON installed.")
-else:
-    manager.start()
+    if os.getenv("GLIA_NRN_AVAILABLE") == "0":
+        raise Exception("Cannot start Glia without NEURON installed.")
+    else:
+        manager.start()
+except GliaError as e:
+    print("GLIA ERROR", e)
+    exit(1)

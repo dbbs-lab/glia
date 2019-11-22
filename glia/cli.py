@@ -6,6 +6,8 @@ if glia_pkg is None:
 else:
     import glia
 
+from glia.exceptions import GliaError
+
 def glia_cli():
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers()
@@ -19,12 +21,19 @@ def glia_cli():
     install_parser.add_argument("command", action="store", help="pip install command")
     install_parser.set_defaults(func=install_package)
 
+    install_parser = subparsers.add_parser("compile", description="Compile the NEURON mechanism library.")
+    install_parser.set_defaults(func=compile)
+
     cl_args = parser.parse_args()
     if hasattr(cl_args, 'func'):
         cl_args.func(cl_args)
 
+
 def install_package(args):
     glia.manager.install(args.command)
+
+def compile(args):
+    glia.manager.compile()
 
 if __name__ == "__main__":
     print("Running glia-cli script.")

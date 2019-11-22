@@ -1,6 +1,7 @@
 import os, sys, pkg_resources, json, subprocess
 from shutil import copy2 as copy_file
 from .hash import get_directory_hash
+from .exceptions import GliaError, CompileError
 
 class Glia:
 
@@ -22,7 +23,10 @@ class Glia:
             print("Glia packages modified, cache outdated.")
             self.compile()
         from neuron import h
-        h.nrn_load_dll(Glia.path(".neuron", "x86_64", ".libs", "libnrnmech.so"))
+        if sys.platform == 'win32':
+            h.nrn_load_dll(Glia.path(".neuron", "mod", "libnrnmech.dll"))
+        else:
+            h.nrn_load_dll(Glia.path(".neuron", "x86_64", ".libs", "libnrnmech.so"))
 
     def compile(self):
         print("Glia is compiling.")
@@ -40,13 +44,34 @@ class Glia:
                 print("Compiling asset:", mod_file)
             cache_data["mod_hashes"][pkg.path] = get_directory_hash(mod_path)
         self._compile(mod_files)
+        print("\nCompilation complete!")
         print("Compiled assets:", ", ".join(list(set(map(lambda a: a[0].name + '.' + a[1].asset_name + '({})'.format(a[1].variant), assets)))))
         self.update_cache(cache_data)
+        print("Updated cache.")
 
     def _compile(self, files):
         neuron_mod_path = self.get_neuron_mod_path()
         for file in files:
             copy_file(file, neuron_mod_path)
+        if sys.platform == "win32":
+            self._compile_windows(neuron_mod_path)
+        else:
+            raise NotImplementedError("win32 is only supported platform. You are using " + sys.platform)
+
+    def _compile_windows(self, neuron_mod_path):
+        nrn_path = os.getenv('NEURONHOME')
+        os.chdir(neuron_mod_path)
+        cyg_path = nrn_path.replace(":\\","\\").replace("\\","/")
+        process = subprocess.Popen([
+            os.path.join(nrn_path, "mingw/usr/bin/sh"),
+            os.path.join(nrn_path, "lib/mknrndll.sh"),
+            os.path.join("/cygdrive/", cyg_path)],
+            stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+        stdout, stderr = process.communicate(input=b'\n')
+        self._compiled = process.returncode == 0
+        if process.returncode != 0:
+            raise CompileError("during NEURON compilation:\n" + stderr.decode('UTF-8'))
 
     def install(self, command):
         subprocess.call([sys.executable, "-m", "pip", "install", command])
