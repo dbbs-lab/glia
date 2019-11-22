@@ -1,6 +1,6 @@
 import os
 glia_path = os.path.dirname(__file__)
-os.environ["GLIA_PATH"] = glia_path
+os.environ["GLIA_PATH"] = os.path.abspath(glia_path)
 try:
     import neuron
     os.environ["GLIA_NRN_AVAILABLE"] = "1"

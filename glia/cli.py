@@ -1,4 +1,10 @@
-import sys, argparse
+import os, sys, argparse
+glia_pkg = globals()["__package__"]
+if glia_pkg is None:
+    sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+    import glia
+else:
+    import glia
 
 def glia_cli():
     parser = argparse.ArgumentParser()
@@ -18,5 +24,8 @@ def glia_cli():
         cl_args.func(cl_args)
 
 def install_package(args):
-    import subprocess
-    subprocess.call([sys.executable, "-m", "pip", "install", args.command])
+    glia.manager.install(args.command)
+
+if __name__ == "__main__":
+    print("Running glia-cli script.")
+    glia_cli()
