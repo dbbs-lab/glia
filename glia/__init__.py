@@ -26,3 +26,6 @@ try:
 except GliaError as e:
     print("GLIA ERROR", e)
     exit(1)
+
+def insert(section, asset, pkg=None, variant=None):
+    manager.insert_mechanism(section, asset, pkg, variant)

@@ -3,3 +3,6 @@ class GliaError(Exception):
 
 class CompileError(GliaError):
     pass
+
+class LibraryError(GliaError):
+    pass

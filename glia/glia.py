@@ -1,7 +1,8 @@
 import os, sys, pkg_resources, json, subprocess
 from shutil import copy2 as copy_file
 from .hash import get_directory_hash
-from .exceptions import GliaError, CompileError
+from .exceptions import GliaError, CompileError, LibraryError
+from .resolve import Resolver
 
 class Glia:
 
@@ -12,21 +13,24 @@ class Glia:
             advert = pkg_ptr.load()
             self.entry_points.append(advert)
             self.packages.append(advert.package())
-        pass
+        self.resolver = Resolver(self)
 
     @staticmethod
     def path(*subfolders):
-        return os.path.join(os.environ["GLIA_PATH"], *subfolders)
+        return os.path.abspath(os.path.join(os.environ["GLIA_PATH"], *subfolders))
 
     def start(self):
         if not self.is_cache_fresh():
             print("Glia packages modified, cache outdated.")
             self.compile()
+        self.init_neuron()
+
+    def init_neuron(self):
+        if hasattr(self, "h"):
+            return
         from neuron import h
-        if sys.platform == 'win32':
-            h.nrn_load_dll(Glia.path(".neuron", "mod", "libnrnmech.dll"))
-        else:
-            h.nrn_load_dll(Glia.path(".neuron", "x86_64", ".libs", "libnrnmech.so"))
+        self.h = h
+        self.load_neuron_dll()
 
     def compile(self):
         print("Glia is compiling.")
@@ -92,6 +96,36 @@ class Glia:
     def install(self, command):
         subprocess.call([sys.executable, "-m", "pip", "install", command])
 
+    def test_mechanism(self, mechanism):
+        self.init_neuron()
+        s = self.h.Section()
+        try:
+            self.insert_mechanism(s, mechanism)
+        except ValueError as e:
+            if str(e).find("argument not a density mechanism name") != -1:
+                raise LibraryError(mechanism + " mechanism not found")
+        print("Mechanism OK!")
+
+    def insert_mechanism(self, section, asset, pkg=None, variant=None):
+        self.init_neuron()
+        if asset.startswith("_glia"):
+            mod_name = asset
+            print("Using given mechanism '{}'".format(mod_name))
+        else:
+            mod_name = self.resolver.resolve(asset, pkg, variant)
+            print("Selection resolved to", mod_name)
+        try:
+            section.insert(mod_name)
+        except ValueError as e:
+            if str(e).find("argument not a density mechanism name") != -1:
+                raise LibraryError(mod_name + " mechanism not found")
+
+    def load_neuron_dll(self):
+        if sys.platform == 'win32':
+            self.h.nrn_load_dll(Glia.path(".neuron", "mod", "libnrnmech.dll"))
+        else:
+            self.h.nrn_load_dll(Glia.path(".neuron", "mod", "x86_64", ".libs", "libnrnmech.so"))
+
     def is_cache_fresh(self):
         try:
             cache_data = self.read_cache()
@@ -131,13 +165,13 @@ class Glia:
     def get_neuron_mod_path(self):
         return Glia.path(".neuron", "mod")
 
-    def get_asset_full_name(self, pkg, mod):
+    def get_asset_full_name(self, mod):
         return "{}__{}__{}".format(mod.namespace, mod.asset_name, mod.variant)
 
     def get_asset_mod_path(self, pkg, mod):
         return os.path.abspath(os.path.join(
             self.get_mod_path(pkg),
-             self.get_asset_full_name(pkg, mod) + ".mod"
+             self.get_asset_full_name(mod) + ".mod"
         ))
 
     def read_cache(self):
