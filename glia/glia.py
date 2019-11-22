@@ -55,11 +55,14 @@ class Glia:
             copy_file(file, neuron_mod_path)
         if sys.platform == "win32":
             self._compile_windows(neuron_mod_path)
+        elif sys.platform == "linux":
+            self._compile_linux(neuron_mod_path)
         else:
-            raise NotImplementedError("win32 is only supported platform. You are using " + sys.platform)
+            raise NotImplementedError("Only linux and win32 are supported. You are using " + sys.platform)
 
     def _compile_windows(self, neuron_mod_path):
         nrn_path = os.getenv('NEURONHOME')
+        current_dir = os.getcwd()
         os.chdir(neuron_mod_path)
         cyg_path = nrn_path.replace(":\\","\\").replace("\\","/")
         process = subprocess.Popen([
@@ -70,6 +73,19 @@ class Glia:
 
         stdout, stderr = process.communicate(input=b'\n')
         self._compiled = process.returncode == 0
+        os.chdir(current_dir)
+        if process.returncode != 0:
+            raise CompileError("during NEURON compilation:\n" + stderr.decode('UTF-8'))
+
+    def _compile_linux(self, neuron_mod_path):
+        current_dir = os.getcwd()
+        os.chdir(neuron_mod_path)
+        process = subprocess.Popen(["nrnivmodl"],
+            stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+        stdout, stderr = process.communicate()
+        self._compiled = process.returncode == 0
+        os.chdir(current_dir)
         if process.returncode != 0:
             raise CompileError("during NEURON compilation:\n" + stderr.decode('UTF-8'))
 
