@@ -3,6 +3,7 @@ from shutil import copy2 as copy_file
 from .hash import get_directory_hash
 from .exceptions import GliaError, CompileError, LibraryError
 from .resolution import Resolver
+from .assets import Package, Mod
 
 class Glia:
 
@@ -16,7 +17,7 @@ class Glia:
         for pkg_ptr in pkg_resources.iter_entry_points("glia.package"):
             advert = pkg_ptr.load()
             self.entry_points.append(advert)
-            self.packages.append(advert.package())
+            self.packages.append(Package.from_remote(advert))
 
     @staticmethod
     def path(*subfolders):
@@ -49,7 +50,7 @@ class Glia:
             mod_dirs.append(mod_path)
             for mod in pkg.mods:
                 assets.append((pkg, mod))
-                mod_file = self.get_asset_mod_path(pkg, mod)
+                mod_file = mod.mod_path
                 mod_files.append(mod_file)
                 print("Compiling asset:", mod_file)
             cache_data["mod_hashes"][pkg.path] = get_directory_hash(mod_path)
@@ -104,13 +105,13 @@ class Glia:
 
     def test_mechanism(self, mechanism):
         self.init_neuron()
-        s = self.h.Section()
         try:
+            s = self.h.Section()
             self.insert_mechanism(s, mechanism)
         except ValueError as e:
             if str(e).find("argument not a density mechanism name") != -1:
                 raise LibraryError(mechanism + " mechanism not found")
-        print("Mechanism OK!")
+        return True
 
     def insert_mechanism(self, section, asset, pkg=None, variant=None):
         self.init_neuron()
@@ -119,7 +120,6 @@ class Glia:
             print("Using given mechanism '{}'".format(mod_name))
         else:
             mod_name = self.resolver.resolve(asset, pkg, variant)
-            print("Selection resolved to", mod_name)
         try:
             return section.insert(mod_name)
         except ValueError as e:
@@ -174,15 +174,6 @@ class Glia:
 
     def get_neuron_mod_path(self):
         return Glia.path(".neuron", "mod")
-
-    def get_asset_full_name(self, mod):
-        return "{}__{}__{}".format(mod.namespace, mod.asset_name, mod.variant)
-
-    def get_asset_mod_path(self, pkg, mod):
-        return os.path.abspath(os.path.join(
-            self.get_mod_path(pkg),
-             self.get_asset_full_name(mod) + ".mod"
-        ))
 
     def read_storage(self, *path):
             return json.load(open(self.path(".glia", *path)))

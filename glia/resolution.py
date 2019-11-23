@@ -41,16 +41,16 @@ class Resolver:
             raise ResolveError("Selection could not be resolved: Asset '{}' not found.".format(asset_name))
 
         # Try resolving with preference
-        resolve_name = self.resolve_preference(asset_name, pkg=pkg, variant=variant)
-        if not resolve_name is None:
-            return resolve_name
+        resolved = self.resolve_preference(asset_name, pkg=pkg, variant=variant)
+        if not resolved is None:
+            return resolved.mod_name
 
         # If there was no preference, or if the preference couldn't provide the
         # selection criteria, try resolving without preference.
         resolved = self._get_resolved(asset_name, pkg, variant)
         if len(resolved) == 0:
             raise NoMatchesError("Selection could not be resolved.")
-        resolve_name = self.manager.get_asset_full_name(resolved[0])
+        resolve_name = resolved[0].mod_name
         if len(resolved) > 1:
             return self.resolve_multi(resolved, asset_name, pkg, variant)
         return resolve_name
@@ -93,7 +93,7 @@ class Resolver:
             criterium += " ({})".format(variant)
         raise TooManyMatchesError(
             "Selection could not be resolved, too many matches for '{}':\n  * ".format(criterium) +
-            "\n  * ".join(list(map(lambda r: self.manager.get_asset_full_name(r), resolved))) +
+            "\n  * ".join(list(map(lambda r: r.mod_name, resolved))) +
             '\n Try specifying a package or variant'
         )
 

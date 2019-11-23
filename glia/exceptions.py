@@ -15,3 +15,9 @@ class TooManyMatchesError(ResolveError):
 
 class NoMatchesError(ResolveError):
     pass
+
+class PackageError(GliaError):
+    pass
+
+class PackageModError(GliaError):
+    pass

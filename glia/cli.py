@@ -6,7 +6,7 @@ if glia_pkg is None:
 else:
     import glia
 
-from glia.exceptions import GliaError, ResolveError
+from glia.exceptions import GliaError, ResolveError, LibraryError
 
 def glia_cli():
     parser = argparse.ArgumentParser()
@@ -28,18 +28,22 @@ def glia_cli():
     install_parser.set_defaults(func=list_assets)
 
     select_parser = subparsers.add_parser("select", description="Set global preferences for an asset.")
-    select_parser.add_argument("asset", action="store", help="The asset to set preferences for")
+    select_parser.add_argument("asset", action="store", help="Asset name.")
     select_parser.add_argument("-p","--pkg", action="store", help="Package preference for this asset")
     select_parser.add_argument("-v","--variant", action="store", help="Variant preference for this asset")
     select_parser.set_defaults(func=lambda args: select(args.asset, pkg=args.pkg, variant=args.variant, glbl=True))
 
     show_parser = subparsers.add_parser("show", description="Print info on an asset.")
-    show_parser.add_argument("asset", action="store", help="The asset to set preferences for")
+    show_parser.add_argument("asset", action="store", help="Asset name.")
     show_parser.set_defaults(func=lambda args: _show_asset(args.asset))
+
+    show_pkg_parser = subparsers.add_parser("show-pkg", description="Print info on a package.")
+    show_pkg_parser.add_argument("package", action="store", help="Package name")
+    show_pkg_parser.set_defaults(func=lambda args: _show_pkg(args.package))
 
     test_mech_parser = subparsers.add_parser("test", description="Test a mechanism.")
     test_mech_parser.add_argument("mechanism", action="store", help="Name of the mechanism")
-    test_mech_parser.set_defaults(func=lambda args: test([args.mechanism]))
+    test_mech_parser.set_defaults(func=lambda args: test(args.mechanism))
 
     cl_args = parser.parse_args()
     if hasattr(cl_args, 'func'):
@@ -49,7 +53,6 @@ def glia_cli():
             print("GLIA ERROR", str(e))
             exit(1)
 
-
 def install_package(args):
     glia.manager.install(args.command)
     glia.manager.start()
@@ -58,14 +61,36 @@ def compile(args):
     glia.manager.compile()
 
 def test(*args):
+    print(args)
     for mechanism in args:
-        glia.manager.test_mechanism(mechanism)
+        mstr = "[OK]"
+        try:
+            glia.manager.test_mechanism(mechanism)
+        except LibraryError as _:
+            mstr = "[ERROR]"
+        except ResolveError as _:
+            mstr = "[MULTI]"
+        print(mstr, mechanism)
 
 def list_assets(args):
     glia.manager.list_assets()
 
 def select(asset, pkg=None, variant=None, glbl=False):
     glia.manager.select(asset, pkg=pkg, variant=variant, glbl=glbl)
+
+
+
+## Prints
+
+class colors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
 
 def _show_asset(asset):
     index = glia.manager.resolver.index
@@ -87,10 +112,30 @@ def _show_asset(asset):
         if "variant" in preference:
             pref_string += "variant=" + preference["variant"] + " "
         print("Current preferences: ", pref_string)
-        print("Current preferred module:", glia.manager.get_asset_full_name(pref_mod))
+        print("Current preferred module:", pref_mod.mod_name)
     print("Available modules:")
     for mod in glia.manager.resolver.index[asset]:
-        print("  *", glia.manager.get_asset_full_name(mod))
+        print("  *", mod.mod_name)
+
+def _show_pkg(pkg_name):
+    candidates = list(filter(lambda p: p.name.find(pkg_name) != -1, glia.manager.packages))
+    if not len(candidates):
+        print("Package not found")
+        return
+    for candidate in candidates:
+        if sys.platform == "win32":
+            pstr = "Package: " + candidate.name
+        else:
+            pstr = "Package: " + colors.OKGREEN + candidate.name + colors.ENDC
+        print(pstr)
+        print("=" * len(pstr))
+        print("Path: " + candidate.path)
+        print("Module path: " + candidate.mod_path)
+        print()
+        print("Available modules:")
+        for mod in candidate.mods:
+            print("  *", mod.mod_name)
+        print()
 
 if __name__ == "__main__":
     print("Careful! Executing cli.py is unsupported.")

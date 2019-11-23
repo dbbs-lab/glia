@@ -32,3 +32,9 @@ def insert(section, asset, pkg=None, variant=None):
 
 def resolve(asset, pkg=None, variant=None):
     return manager.resolver.resolve(asset, pkg, variant)
+
+def select(asset, pkg=None, variant=None):
+    return manager.select(asset, pkg=pkg, variant=variant)
+
+def compile():
+    return manager.compile()
