@@ -8,21 +8,22 @@ class Glia:
 
     def __init__(self):
         self.entry_points = []
+        self.discover_packages()
+        self.resolver = Resolver(self)
+
+    def discover_packages(self):
         self.packages = []
         for pkg_ptr in pkg_resources.iter_entry_points("glia.package"):
             advert = pkg_ptr.load()
             self.entry_points.append(advert)
             self.packages.append(advert.package())
-        self.resolver = Resolver(self)
 
     @staticmethod
     def path(*subfolders):
         return os.path.abspath(os.path.join(os.environ["GLIA_PATH"], *subfolders))
 
     def start(self):
-        if not self.is_cache_fresh():
-            print("Glia packages modified, cache outdated.")
-            self.compile()
+        self.compile(check_cache=True)
         self.init_neuron()
 
     def init_neuron(self):
@@ -32,7 +33,12 @@ class Glia:
         self.h = h
         self.load_neuron_dll()
 
-    def compile(self):
+    def compile(self, check_cache=False):
+        if check_cache:
+            if not self.is_cache_fresh():
+                print("Glia packages modified, cache outdated.")
+            else:
+                return
         print("Glia is compiling.")
         cache_data = {"mod_hashes": {}}
         mod_dirs = []
@@ -119,6 +125,9 @@ class Glia:
         except ValueError as e:
             if str(e).find("argument not a density mechanism name") != -1:
                 raise LibraryError(mod_name + " mechanism not found")
+
+    def select(self, asset_name, glbl=False, pkg=None, variant=None):
+        return self.resolver.set_preference(asset_name, glbl=glbl, pkg=pkg, variant=variant)
 
     def load_neuron_dll(self):
         if sys.platform == 'win32':

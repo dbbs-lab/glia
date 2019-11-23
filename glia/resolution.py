@@ -41,46 +41,76 @@ class Resolver:
             raise ResolveError("Selection could not be resolved: Asset '{}' not found.".format(asset_name))
 
         # Try resolving with preference
-        if self.has_preference(asset_name):
-            resolve_name = self.resolve_preference(asset_name, pkg=pkg, variant=variant)
-            if not resolve_name is None:
-                return resolve_name
+        resolve_name = self.resolve_preference(asset_name, pkg=pkg, variant=variant)
+        if not resolve_name is None:
+            return resolve_name
 
         # If there was no preference, or if the preference couldn't provide the
         # selection criteria, try resolving without preference.
+        resolved = self._get_resolved(asset_name, pkg, variant)
+        if len(resolved) == 0:
+            raise NoMatchesError("Selection could not be resolved.")
+        resolve_name = self.manager.get_asset_full_name(resolved[0])
+        if len(resolved) > 1:
+            return self.resolve_multi(resolved, asset_name, pkg, variant)
+        return resolve_name
 
+    def resolve_preference(self, asset_name, pkg=None, variant=None):
+        preferences = self._preferences()
+        if not asset_name in preferences:
+            return None
+        preference = preferences[asset_name]
+        if pkg is None and "package" in preference:
+            pkg = preference["package"]
+        if variant is None and "variant" in preference:
+            variant = preference["variant"]
+        resolved = self._get_resolved(asset_name, pkg, variant)
+        if len(resolved) == 1:
+            return resolved[0]
+        elif len(resolved) > 1:
+            return self.resolve_multi(resolved, asset_name, pkg, variant)
+        else:
+            return None
+
+    def _get_resolved(self, asset_name, pkg, variant):
         mods = iter(self.index[asset_name])
         if pkg:
             mods = filter(lambda m: m.pkg_name == pkg, mods)
         if variant:
             mods = filter(lambda m: m.variant == variant, mods)
-        resolved = list(mods)
-        if len(resolved) == 0:
-            raise NoMatchesError("Selection could not be resolved.")
-        resolve_name = self.manager.get_asset_full_name(resolved[0])
-        if len(resolved) > 1:
-            # If all candidates are from the same package, and 1 is the default variant
-            # then return that default variant
-            if all(map(lambda m: m.pkg_name == resolved[0].pkg_name, resolved)) \
-              and any(map(lambda m: m.variant == "0", resolve)):
-                return list(filter(lambda m: m.variant == "0", resolve))[0]
-            criterium = asset_name
-            if pkg:
-                criterium = pkg + "." + asset_name
-            if variant:
-                criterium += " ({})".format(variant)
-            raise TooManyMatchesError(
-                "Selection could not be resolved, too many matches for '{}':\n  * ".format(criterium) +
-                "\n  * ".join(list(map(lambda r: self.manager.get_asset_full_name(r), resolved))) +
-                '\n Try specifying a package or variant'
-            )
-        return resolve_name
+        return list(mods)
+
+    def resolve_multi(self, resolved, asset_name, pkg, variant):
+        # If all candidates are from the same package, and 1 is the default variant
+        # then return that default variant
+        if all(map(lambda m: m.pkg_name == resolved[0].pkg_name, resolved)) \
+          and any(map(lambda m: m.variant == "0", resolve)):
+            return list(filter(lambda m: m.variant == "0", resolve))[0]
+        criterium = asset_name
+        if pkg:
+            criterium = pkg + "." + asset_name
+        if variant:
+            criterium += " ({})".format(variant)
+        raise TooManyMatchesError(
+            "Selection could not be resolved, too many matches for '{}':\n  * ".format(criterium) +
+            "\n  * ".join(list(map(lambda r: self.manager.get_asset_full_name(r), resolved))) +
+            '\n Try specifying a package or variant'
+        )
 
     def has_preference(self, asset_name):
         return asset_name in self._preferences()
 
-    def resolve_preference(self, asset_name, pkg=None, variant=None):
-        raise NotImplementedError()
+    def set_preference(self, asset_name, glbl=False, pkg=None, variant=None):
+        preference = {}
+        if pkg is not None:
+            preference["package"] = pkg
+        if variant is not None:
+            preference["variant"] = variant
+        if glbl:
+            self.global_preferences[asset_name] = preference
+            self.manager.write_preferences(self.global_preferences)
+        else:
+            self.local_preferences[asset_name] = preference
 
     def _preferences(self):
         pref = self.global_preferences.copy()
