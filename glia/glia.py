@@ -136,7 +136,7 @@ class Glia:
 
     def load_neuron_dll(self):
         if sys.platform == 'win32':
-            self.h.nrn_load_dll(Glia.path(".neuron", "mod", "libnrnmech.dll"))
+            self.h.nrn_load_dll(Glia.path(".neuron", "mod", "nrnmech.dll"))
         else:
             self.h.nrn_load_dll(Glia.path(".neuron", "mod", "x86_64", ".libs", "libnrnmech.so"))
 
