@@ -2,7 +2,7 @@ import os, sys, pkg_resources, json, subprocess
 from shutil import copy2 as copy_file
 from .hash import get_directory_hash
 from .exceptions import GliaError, CompileError, LibraryError
-from .resolve import Resolver
+from .resolution import Resolver
 
 class Glia:
 
@@ -115,7 +115,7 @@ class Glia:
             mod_name = self.resolver.resolve(asset, pkg, variant)
             print("Selection resolved to", mod_name)
         try:
-            section.insert(mod_name)
+            return section.insert(mod_name)
         except ValueError as e:
             if str(e).find("argument not a density mechanism name") != -1:
                 raise LibraryError(mod_name + " mechanism not found")
@@ -147,6 +147,7 @@ class Glia:
         print("Please wait while Glia glues your neurons together...")
         self._mkdir(".glia")
         self.create_cache()
+        self.create_preferences()
         self._mkdir(".neuron")
         self._mkdir(".neuron", "mod")
         self.compile()
@@ -174,14 +175,20 @@ class Glia:
              self.get_asset_full_name(mod) + ".mod"
         ))
 
+    def read_storage(self, *path):
+            return json.load(open(self.path(".glia", *path)))
+
+    def write_storage(self, data, *path):
+        json.dump(data, open(self.path(".glia", *path), "w"))
+
     def read_cache(self):
         try:
-            return json.load(open(self.path(".glia", "cache")))
+            return self.read_storage("cache")
         except FileNotFoundError as _:
             self.create_cache()
 
     def write_cache(self, cache_data):
-        json.dump(cache_data, open(self.path(".glia", "cache"), "w"))
+        self.write_storage(cache_data, "cache")
 
     def update_cache(self, cache_data):
         cache = self.read_cache()
@@ -192,6 +199,15 @@ class Glia:
         empty_cache = {"mod_hashes": []}
         self.write_cache(empty_cache)
 
+    def read_preferences(self):
+        return self.read_storage("preferences")
+
+    def write_preferences(self, preferences):
+        self.write_storage(preferences, "preferences")
+
+    def create_preferences(self):
+        self.write_storage({}, "preferences")
+
     def list_assets(self):
-        print("Assets:", ", ".join(self.resolver.index.keys()))
+        print("Assets:", ", ".join(map(lambda e: e.name + ' (' + str(len(e)) + ')' ,self.resolver.index.values())))
         print("Packages:", ", ".join(map(lambda p: p.name, self.packages)))

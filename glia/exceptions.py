@@ -6,3 +6,12 @@ class CompileError(GliaError):
 
 class LibraryError(GliaError):
     pass
+
+class ResolveError(GliaError):
+    pass
+
+class TooManyMatchesError(ResolveError):
+    pass
+
+class NoMatchesError(ResolveError):
+    pass

@@ -12,7 +12,7 @@ except Exception as e:
 
 
 from .glia import Glia
-from .exceptions import GliaError
+from .exceptions import GliaError, ResolveError, TooManyMatchesError
 manager = Glia()
 
 try:
@@ -28,4 +28,7 @@ except GliaError as e:
     exit(1)
 
 def insert(section, asset, pkg=None, variant=None):
-    manager.insert_mechanism(section, asset, pkg, variant)
+    return manager.insert_mechanism(section, asset, pkg, variant)
+
+def resolve(asset, pkg=None, variant=None):
+    return manager.resolver.resolve(asset, pkg, variant)

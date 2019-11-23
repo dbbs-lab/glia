@@ -53,5 +53,5 @@ def list_assets(args):
     glia.manager.list_assets()
 
 if __name__ == "__main__":
-    print("Running glia-cli script.")
+    print("Careful! Executing cli.py is unsupported.")
     glia_cli()
