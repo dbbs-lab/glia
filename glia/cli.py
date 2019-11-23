@@ -21,6 +21,9 @@ def glia_cli():
     install_parser.add_argument("command", action="store", help="pip install command")
     install_parser.set_defaults(func=install_package)
 
+    install_parser = subparsers.add_parser("list", description="List all glia assets.")
+    install_parser.set_defaults(func=list_assets)
+
     install_parser = subparsers.add_parser("compile", description="Compile the NEURON mechanism library.")
     install_parser.set_defaults(func=compile)
 
@@ -45,6 +48,9 @@ def compile(args):
 
 def test_mech(args):
     glia.manager.test_mechanism(args.mechanism)
+
+def list_assets(args):
+    glia.manager.list_assets()
 
 if __name__ == "__main__":
     print("Running glia-cli script.")

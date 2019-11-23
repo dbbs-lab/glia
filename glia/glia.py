@@ -191,3 +191,7 @@ class Glia:
     def create_cache(self):
         empty_cache = {"mod_hashes": []}
         self.write_cache(empty_cache)
+
+    def list_assets(self):
+        print("Assets:", ", ".join(self.resolver.index.keys()))
+        print("Packages:", ", ".join(map(lambda p: p.name, self.packages)))
