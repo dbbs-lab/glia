@@ -6,7 +6,8 @@ if glia_pkg is None:
 else:
     import glia
 
-from glia.exceptions import GliaError, ResolveError, LibraryError
+from glia.exceptions import GliaError, TooManyMatchesError, UnknownAssetError, \
+    LibraryError
 
 def glia_cli():
     parser = argparse.ArgumentParser()
@@ -42,8 +43,8 @@ def glia_cli():
     show_pkg_parser.set_defaults(func=lambda args: _show_pkg(args.package))
 
     test_mech_parser = subparsers.add_parser("test", description="Test a mechanism.")
-    test_mech_parser.add_argument("mechanism", action="store", help="Name of the mechanism")
-    test_mech_parser.set_defaults(func=lambda args: test(args.mechanism))
+    test_mech_parser.add_argument("mechanisms", nargs='*', action="store", help="Name of the mechanism")
+    test_mech_parser.set_defaults(func=lambda args: test(*args.mechanisms))
 
     cl_args = parser.parse_args()
     if hasattr(cl_args, 'func'):
@@ -61,16 +62,23 @@ def compile(args):
     glia.manager.compile()
 
 def test(*args):
-    print(args)
+    if len(args) == 0:
+        args = glia.manager.resolver.index.keys()
+    successes = 0
+    tests = len(args)
     for mechanism in args:
         mstr = "[OK]"
         try:
             glia.manager.test_mechanism(mechanism)
+            successes += 1
         except LibraryError as _:
             mstr = "[ERROR]"
-        except ResolveError as _:
+        except UnknownAssetError as _:
+            mstr = "[?]"
+        except TooManyMatchesError as _:
             mstr = "[MULTI]"
         print(mstr, mechanism)
+    print("Tests finished:", successes, "out of", tests, "passed")
 
 def list_assets(args):
     glia.manager.list_assets()

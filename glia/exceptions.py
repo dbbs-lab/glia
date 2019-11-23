@@ -16,6 +16,9 @@ class TooManyMatchesError(ResolveError):
 class NoMatchesError(ResolveError):
     pass
 
+class UnknownAssetError(ResolveError):
+    pass
+
 class PackageError(GliaError):
     pass
 

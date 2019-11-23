@@ -1,4 +1,5 @@
-from .exceptions import ResolveError, TooManyMatchesError, NoMatchesError
+from .exceptions import ResolveError, TooManyMatchesError, NoMatchesError, \
+    UnknownAssetError
 
 class IndexEntry:
     def __init__(self, name):
@@ -38,7 +39,7 @@ class Resolver:
 
     def resolve(self, asset_name, pkg=None, variant=None):
         if not asset_name in self.index:
-            raise ResolveError("Selection could not be resolved: Asset '{}' not found.".format(asset_name))
+            raise UnknownAssetError("Selection could not be resolved: Asset '{}' not found.".format(asset_name))
 
         # Try resolving with preference
         resolved = self.resolve_preference(asset_name, pkg=pkg, variant=variant)

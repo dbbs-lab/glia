@@ -59,14 +59,23 @@ class Glia:
         print("Compiled assets:", ", ".join(list(set(map(lambda a: a[0].name + '.' + a[1].asset_name + '({})'.format(a[1].variant), assets)))))
         self.update_cache(cache_data)
         print("Updated cache.")
+        print("Testing assets:")
+        from .cli import test
+        test(*self.resolver.index.keys())
 
     def _compile(self, mod_files):
         neuron_mod_path = self.get_neuron_mod_path()
         for root, dirs, files in os.walk(neuron_mod_path):
             for dir in dirs:
-                rmdir(os.path.join(neuron_mod_path, dir))
+                try:
+                    rmdir(os.path.join(neuron_mod_path, dir))
+                except PermissionError as _:
+                    pass
             for file in files:
-                os.remove(os.path.join(neuron_mod_path, file))
+                try:
+                    os.remove(os.path.join(neuron_mod_path, file))
+                except PermissionError as _:
+                    print("Couldn't remove", file)
         for file in mod_files:
             copy_file(file, neuron_mod_path)
         if sys.platform == "win32":
