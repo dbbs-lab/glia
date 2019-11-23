@@ -1,6 +1,6 @@
 import os
 
-__version__ = "0.0.1"
+__version__ = "0.1"
 
 glia_path = os.path.dirname(__file__)
 os.environ["GLIA_PATH"] = os.path.abspath(glia_path)
