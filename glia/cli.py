@@ -59,7 +59,8 @@ def install_package(args):
     glia.manager.start()
 
 def compile(args):
-    glia.manager.compile()
+    if not glia.manager._compiled:
+        glia.manager.compile()
 
 def test(*args):
     if len(args) == 0:
