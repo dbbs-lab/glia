@@ -1,5 +1,5 @@
 import os, sys, pkg_resources, json, subprocess
-from shutil import copy2 as copy_file
+from shutil import copy2 as copy_file, rmtree as rmdir
 from .hash import get_directory_hash
 from .exceptions import GliaError, CompileError, LibraryError
 from .resolution import Resolver
@@ -60,9 +60,14 @@ class Glia:
         self.update_cache(cache_data)
         print("Updated cache.")
 
-    def _compile(self, files):
+    def _compile(self, mod_files):
         neuron_mod_path = self.get_neuron_mod_path()
-        for file in files:
+        for root, dirs, files in os.walk(neuron_mod_path):
+            for dir in dirs:
+                rmdir(os.path.join(neuron_mod_path, dir))
+            for file in files:
+                os.remove(os.path.join(neuron_mod_path, file))
+        for file in mod_files:
             copy_file(file, neuron_mod_path)
         if sys.platform == "win32":
             self._compile_windows(neuron_mod_path)
