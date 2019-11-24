@@ -1,4 +1,6 @@
-# glia
+[![Build Status](https://travis-ci.org/dbbs-lab/glia.svg?branch=master)](https://travis-ci.org/dbbs-lab/glia)
+
+# Glia: NEURON package manager
 
 Package manager for NEURON.
 
