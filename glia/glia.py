@@ -1,23 +1,28 @@
 import os, sys, pkg_resources, json, subprocess
 from shutil import copy2 as copy_file, rmtree as rmdir
 from .hash import get_directory_hash
-from .exceptions import GliaError, CompileError, LibraryError
+from .exceptions import GliaError, CompileError, LibraryError, NeuronError
 from .resolution import Resolver
 from .assets import Package, Mod
 
 class Glia:
 
     def __init__(self):
+        from . import __version__
+        self.version = __version__
         self.entry_points = []
         self.discover_packages()
-        self.resolver = Resolver(self)
+        if self._is_installed():
+            self.resolver = Resolver(self)
+        else:
+            self.resolver = None
 
     def discover_packages(self):
         self.packages = []
         for pkg_ptr in pkg_resources.iter_entry_points("glia.package"):
             advert = pkg_ptr.load()
             self.entry_points.append(advert)
-            self.packages.append(Package.from_remote(advert))
+            self.packages.append(Package.from_remote(self, advert))
 
     @staticmethod
     def path(*subfolders):
@@ -33,6 +38,9 @@ class Glia:
         from neuron import h
         self.h = h
         self.load_neuron_dll()
+
+    def get_minimum_astro_version(self):
+        return "0.0.3"
 
     def compile(self, check_cache=False):
         if check_cache:
@@ -54,6 +62,10 @@ class Glia:
                 mod_files.append(mod_file)
                 print("Compiling asset:", mod_file)
             cache_data["mod_hashes"][pkg.path] = get_directory_hash(mod_path)
+        if len(mod_files) == 0:
+            print("No packages detected, compilation aborted. Install packages with `glia install`")
+            self._compiled = False
+            return
         self._compile(mod_files)
         print("\nCompilation complete!")
         print("Compiled assets:", ", ".join(list(set(map(lambda a: a[0].name + '.' + a[1].asset_name + '({})'.format(a[1].variant), assets)))))
@@ -61,7 +73,8 @@ class Glia:
         print("Updated cache.")
         print("Testing assets:")
         from .cli import test
-        test(*self.resolver.index.keys())
+        if os.getenv("GLIA_NRN_AVAILABLE") == "1":
+            test(*self.resolver.index.keys())
 
     def _compile(self, mod_files):
         neuron_mod_path = self.get_neuron_mod_path()
@@ -124,12 +137,12 @@ class Glia:
             self.insert_mechanism(s, mechanism)
         except ValueError as e:
             if str(e).find("argument not a density mechanism name") != -1:
-                raise LibraryError(mechanism + " mechanism not found")
+                raise LibraryError(mechanism + " mechanism could not be inserted.")
         return True
 
     def insert_mechanism(self, section, asset, pkg=None, variant=None):
         self.init_neuron()
-        if asset.startswith("_glia"):
+        if asset.startswith("glia"):
             mod_name = asset
             print("Using given mechanism '{}'".format(mod_name))
         else:
@@ -144,10 +157,17 @@ class Glia:
         return self.resolver.set_preference(asset_name, glbl=glbl, pkg=pkg, variant=variant)
 
     def load_neuron_dll(self):
+        if not hasattr(self, "_dll_result"):
+            self._dll_result = self.h.nrn_load_dll(self.get_neuron_dll())
+            self._dll_loaded = self._dll_result == 1.0
+            if not self._dll_loaded:
+                raise NeuronError("Library could not be loaded into NEURON.")
+
+    def get_neuron_dll(self):
         if sys.platform == 'win32':
-            self.h.nrn_load_dll(Glia.path(".neuron", "mod", "nrnmech.dll"))
+            return Glia.path(".neuron", "mod", "nrnmech.dll")
         else:
-            self.h.nrn_load_dll(Glia.path(".neuron", "mod", "x86_64", ".libs", "libnrnmech.so"))
+            return Glia.path(".neuron", "mod", "x86_64", ".libs", "libnrnmech.so")
 
     def is_cache_fresh(self):
         try:
@@ -173,6 +193,7 @@ class Glia:
         self.create_preferences()
         self._mkdir(".neuron")
         self._mkdir(".neuron", "mod")
+        self.resolver = Resolver(self)
         self.compile()
         print("Glia installed.")
 
@@ -190,10 +211,12 @@ class Glia:
         return Glia.path(".neuron", "mod")
 
     def read_storage(self, *path):
-            return json.load(open(self.path(".glia", *path)))
+        with open(self.path(".glia", *path)) as f:
+            return json.load(f)
 
     def write_storage(self, data, *path):
-        json.dump(data, open(self.path(".glia", *path), "w"))
+        with open(self.path(".glia", *path), "w") as f:
+            json.dump(data, f)
 
     def read_cache(self):
         try:

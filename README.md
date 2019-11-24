@@ -23,7 +23,7 @@ and are available either directly using their namespaced name, or using
 ```python
 section = h.Section(name="soma")
 # Add the default Kv1 mechanism provided in the `example` package.
-section.insert("_glia__example__Kv1__0")
+section.insert("glia__example__Kv1__0")
 # Preferably use glia's mechanism resolver to load your favourite Kv1 mechanism.
 g.insert(section, "Kv1")
 ```
@@ -34,7 +34,7 @@ Glia allows for multiple assets to refer to the same mechanism by giving them
 a unique name per package. The standard naming convention is as follows:
 
 ```
-_glia__<package-name>__<asset-name>__<variant-name>
+glia__<package-name>__<asset-name>__<variant-name>
 ```
 
 Double underscores in packages, assets or variant names are not allowed.

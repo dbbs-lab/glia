@@ -1,9 +1,13 @@
-import os
+import os, sys
 
-__version__ = "0.1"
+__version__ = "0.1.1"
+
+
 
 glia_path = os.path.dirname(__file__)
 os.environ["GLIA_PATH"] = os.path.abspath(glia_path)
+if os.getenv("CI") and os.getenv("TRAVIS"):
+    sys.path.insert(0, "/usr/local/nrn/lib/python")
 try:
     import neuron
     os.environ["GLIA_NRN_AVAILABLE"] = "1"

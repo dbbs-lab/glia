@@ -7,6 +7,9 @@ class CompileError(GliaError):
 class LibraryError(GliaError):
     pass
 
+class NeuronError(GliaError):
+    pass
+
 class ResolveError(GliaError):
     pass
 
@@ -22,5 +25,8 @@ class UnknownAssetError(ResolveError):
 class PackageError(GliaError):
     pass
 
-class PackageModError(GliaError):
+class PackageModError(PackageError):
+    pass
+
+class PackageVersionError(PackageError):
     pass

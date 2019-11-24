@@ -27,4 +27,7 @@ setuptools.setup(
             'glia = glia.cli:glia_cli'
         ]
      },
+     install_requires = [
+        "setuptools"
+     ]
  )

@@ -1,5 +1,6 @@
 import os
-from .exceptions import PackageError, PackageModError
+from .exceptions import PackageError, PackageModError, PackageVersionError
+from packaging import version
 
 class Package:
     def __init__(self, name, path):
@@ -8,11 +9,16 @@ class Package:
         self.mods = []
 
     @classmethod
-    def from_remote(cls, advert):
+    def from_remote(cls, manager, advert):
         try:
             pkg = advert.package()
         except Exception as e:
             raise PackageError("Could not retrieve glia package from advertised object " + str(advert))
+        min_astro = manager.get_minimum_astro_version()
+        if not hasattr(pkg, "astro_version"):
+            raise PackageVersionError("Ancient Glia package too old. Minimum astro v{} required.".format(min_astro))
+        elif version.parse(min_astro) > version.parse(pkg.astro_version):
+            raise PackageVersionError("Glia package too old. v{}, minimum v{} required.".format(pkg.astro_version, min_astro))
         try:
             p = cls(pkg.name, pkg.path)
             p._load_remote_mods(pkg)
@@ -33,7 +39,7 @@ class Mod:
     def __init__(self, pkg, name, variant):
         self.pkg = pkg
         self.pkg_name = pkg.name
-        self.namespace = "_glia__" + pkg.name
+        self.namespace = "glia__" + pkg.name
         self.asset_name = name
         self.variant = variant
 

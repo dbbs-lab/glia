@@ -59,7 +59,7 @@ def install_package(args):
     glia.manager.start()
 
 def compile(args):
-    if not glia.manager._compiled:
+    if not hasattr(glia.manager, "_compiled") or not glia.manager._compiled:
         glia.manager.compile()
 
 def test(*args):
