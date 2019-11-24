@@ -1,5 +1,19 @@
 # Version 0
 
+## 0.1.2
+
+* Added Linux unit tests on Travis CI
+* Glia checks whether packages were packaged with a recent enough Astro version.
+
+### Bugfixes
+
+* Glia doesn't crash anymore when trying to load preferences before being
+  installed.
+
+## 0.1.1
+
+* Temporary release
+
 ## 0.1
 
 * Glia can now use preferences to select a specific mod file when multiple
