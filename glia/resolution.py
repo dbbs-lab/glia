@@ -86,7 +86,7 @@ class Resolver:
         # then return that default variant
         if all(map(lambda m: m.pkg_name == resolved[0].pkg_name, resolved)) \
           and any(map(lambda m: m.variant == "0", resolved)):
-            return list(filter(lambda m: m.variant == "0", resolved))[0]
+            return list(filter(lambda m: m.variant == "0", resolved))[0].mod_name
         criterium = asset_name
         if pkg:
             criterium = pkg + "." + asset_name
