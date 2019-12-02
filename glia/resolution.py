@@ -85,8 +85,8 @@ class Resolver:
         # If all candidates are from the same package, and 1 is the default variant
         # then return that default variant
         if all(map(lambda m: m.pkg_name == resolved[0].pkg_name, resolved)) \
-          and any(map(lambda m: m.variant == "0", resolve)):
-            return list(filter(lambda m: m.variant == "0", resolve))[0]
+          and any(map(lambda m: m.variant == "0", resolved)):
+            return list(filter(lambda m: m.variant == "0", resolved))[0]
         criterium = asset_name
         if pkg:
             criterium = pkg + "." + asset_name

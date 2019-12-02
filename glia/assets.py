@@ -16,7 +16,7 @@ class Package:
             raise PackageError("Could not retrieve glia package from advertised object " + str(advert))
         min_astro = manager.get_minimum_astro_version()
         if not hasattr(pkg, "astro_version"):
-            raise PackageVersionError("Ancient Glia package too old. Minimum astro v{} required.".format(min_astro))
+            raise PackageVersionError("Ancient Glia package '{}' too old. Minimum astro v{} required.".format(pkg.name, min_astro))
         elif version.parse(min_astro) > version.parse(pkg.astro_version):
             raise PackageVersionError("Glia package too old. v{}, minimum v{} required.".format(pkg.astro_version, min_astro))
         try:
