@@ -45,17 +45,28 @@ class Mod:
 
     @classmethod
     def from_remote(cls, package, remote_object):
-        required = {'name': 'asset_name', 'variant': 'variant'}
+        excluded = ['pkg_name', 'asset_name', 'namespace', 'pkg']
+        key_map = {'asset_name': 'name', '_is_point_process': 'is_point_process'}
+        required = ['asset_name', 'variant']
         kwargs = {}
-        for local_attr, remote_attr in required.items():
+        # Copy over allowed
+        for key, value in remote_object.__dict__.items():
+            if key not in excluded:
+                kwargs[key if key not in key_map else key_map[key]] = value
+        for remote_attr in required:
+            local_attr = remote_attr if remote_attr not in key_map else key_map[remote_attr]
             try:
                 kwargs[local_attr] = remote_object.__dict__[remote_attr]
             except KeyError as e:
                 e_str = "A mod"
                 if "name" in kwargs:
                     e_str = kwargs["name"]
-                raise PackageModError(e_str + " in {} did not specify required attribute {}.".format(package.name, remote_attr))
-        return cls(package, **kwargs)
+                raise PackageModError(e_str + " in {} did not specify required attribute '{}'.".format(package.name, remote_attr))
+        try:
+            return cls(package, **kwargs)
+        except TypeError as e:
+            attr = str(e)[str(e).find("'"):-1]
+            raise PackageModError("Mod specified an unknown attribute {}'".format(attr)) from None
 
     @property
     def mod_name(self):
