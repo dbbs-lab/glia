@@ -32,10 +32,10 @@ except GliaError as e:
     exit(1)
 
 def insert(section, asset, pkg=None, variant=None):
-    return manager.insert(section, asset, pkg, variant)
+    return manager.insert(section, asset, pkg=pkg, variant=variant)
 
 def resolve(asset, pkg=None, variant=None):
-    return manager.resolver.resolve(asset, pkg, variant)
+    return manager.resolver.resolve(asset, pkg=pkg, variant=variant)
 
 def select(asset, pkg=None, variant=None):
     return manager.select(asset, pkg=pkg, variant=variant)
