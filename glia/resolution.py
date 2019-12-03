@@ -30,12 +30,14 @@ class Resolver:
     def construct_index(self):
         packages = self.manager.packages
         self.index = {}
+        self._reverse_lookup = {}
         for pkg in packages:
             for mod in pkg.mods:
                 name = mod.asset_name
                 if not name in self.index:
                     self.index[name] = IndexEntry(name)
                 self.index[name].append(mod)
+                self._reverse_lookup[mod.mod_name] = mod
 
     def resolve(self, asset_name, pkg=None, variant=None):
         if not asset_name in self.index:
@@ -72,6 +74,12 @@ class Resolver:
             return self.resolve_multi(resolved, asset_name, pkg, variant)
         else:
             return None
+
+    def lookup(self, mod_name):
+        if not mod_name in self._reverse_lookup:
+            raise LookupError("No mod with name '{}' found".format(mod_name))
+        else:
+            return self._reverse_lookup[mod_name]
 
     def _get_resolved(self, asset_name, pkg, variant):
         mods = iter(self.index[asset_name])
