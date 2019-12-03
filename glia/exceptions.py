@@ -10,6 +10,9 @@ class LibraryError(GliaError):
 class NeuronError(GliaError):
     pass
 
+class LookupError(GliaError):
+    pass
+
 class ResolveError(GliaError):
     pass
 
