@@ -1,5 +1,16 @@
 # Version 0
 
+## 0.1.5
+
+* Added support for point_processes. Point processes and mechanisms can be
+  inserted indiscriminately with `g.insert`.
+* The Mod object of a resolved mod name can be reverse looked up through the
+  `Resolver.lookup` function.
+
+## 0.1.3 & 0.1.4
+
+Bugfixes
+
 ## 0.1.2
 
 * Added Linux unit tests on Travis CI
