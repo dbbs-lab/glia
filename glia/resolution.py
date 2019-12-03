@@ -55,7 +55,7 @@ class Resolver:
             raise NoMatchesError("Selection could not be resolved.")
         resolve_name = resolved[0].mod_name
         if len(resolved) > 1:
-            return self.resolve_multi(resolved, asset_name, pkg, variant)
+            return self._resolve_multi(resolved, asset_name, pkg, variant)
         return resolve_name
 
     def resolve_preference(self, asset_name, pkg=None, variant=None):
@@ -71,7 +71,7 @@ class Resolver:
         if len(resolved) == 1:
             return resolved[0]
         elif len(resolved) > 1:
-            return self.resolve_multi(resolved, asset_name, pkg, variant)
+            return self._resolve_multi(resolved, asset_name, pkg, variant)
         else:
             return None
 
@@ -89,7 +89,7 @@ class Resolver:
             mods = filter(lambda m: m.variant == variant, mods)
         return list(mods)
 
-    def resolve_multi(self, resolved, asset_name, pkg, variant):
+    def _resolve_multi(self, resolved, asset_name, pkg, variant):
         # If all candidates are from the same package, and 1 is the default variant
         # then return that default variant
         if all(map(lambda m: m.pkg_name == resolved[0].pkg_name, resolved)) \
