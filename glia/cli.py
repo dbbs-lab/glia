@@ -44,7 +44,8 @@ def glia_cli():
 
     test_mech_parser = subparsers.add_parser("test", description="Test a mechanism.")
     test_mech_parser.add_argument("mechanisms", nargs='*', action="store", help="Name of the mechanism")
-    test_mech_parser.set_defaults(func=lambda args: test(*args.mechanisms))
+    test_mech_parser.add_argument("--verbose", action="store_true", help="Show error messages")
+    test_mech_parser.set_defaults(func=lambda args: test(*args.mechanisms, verbose=args.verbose))
 
     cl_args = parser.parse_args()
     if hasattr(cl_args, 'func'):
@@ -62,23 +63,31 @@ def compile(args):
     if not hasattr(glia.manager, "_compiled") or not glia.manager._compiled:
         glia.manager.compile()
 
-def test(*args):
+def test(*args, verbose=False):
     if len(args) == 0:
         args = glia.manager.resolver.index.keys()
     successes = 0
     tests = len(args)
     for mechanism in args:
         mstr = "[OK]"
+        estr = ""
         try:
             glia.manager.test_mechanism(mechanism)
             successes += 1
-        except LibraryError as _:
+        except LibraryError as e:
             mstr = "[ERROR]"
+            estr = str(e)
         except UnknownAssetError as _:
             mstr = "[?]"
-        except TooManyMatchesError as _:
+        except TooManyMatchesError as e:
             mstr = "[MULTI]"
+            estr = str(e)
+        except LookupError as e:
+            mstr = "[X]"
+            estr = str(e)
         print(mstr, mechanism)
+        if verbose and estr != '':
+            print("  -- " + estr)
     print("Tests finished:", successes, "out of", tests, "passed")
 
 def list_assets(args):
