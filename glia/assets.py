@@ -23,8 +23,7 @@ class Package:
             p = cls(pkg.name, pkg.path)
             p._load_remote_mods(pkg)
         except AttributeError as e:
-            print(dir(e))
-            raise PackageError("Package '{}' is missing attributes:".format(advert.name))
+            raise PackageError("Package '{}' is missing attributes:".format(advert.__name__))
         return p
 
     def _load_remote_mods(self, remote_pkg):
