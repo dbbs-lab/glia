@@ -35,12 +35,13 @@ class Package:
         return os.path.abspath(os.path.join(self.path, "mod"))
 
 class Mod:
-    def __init__(self, pkg, name, variant):
+    def __init__(self, pkg, name, variant, is_point_process=False):
         self.pkg = pkg
         self.pkg_name = pkg.name
         self.namespace = "glia__" + pkg.name
         self.asset_name = name
         self.variant = variant
+        self.is_point_process = is_point_process
 
     @classmethod
     def from_remote(cls, package, remote_object):
