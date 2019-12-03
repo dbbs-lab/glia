@@ -134,24 +134,34 @@ class Glia:
         self.init_neuron()
         try:
             s = self.h.Section()
-            self.insert_mechanism(s, mechanism)
+            self.insert(s, mechanism)
         except ValueError as e:
             if str(e).find("argument not a density mechanism name") != -1:
                 raise LibraryError(mechanism + " mechanism could not be inserted.")
         return True
 
-    def insert_mechanism(self, section, asset, pkg=None, variant=None):
+    def insert(self, section, asset, pkg=None, variant=None):
         self.init_neuron()
         if asset.startswith("glia"):
             mod_name = asset
-            print("Using given mechanism '{}'".format(mod_name))
         else:
             mod_name = self.resolver.resolve(asset, pkg, variant)
+        mod = self.resolver.lookup(mod_name)
+        if mod.is_point_process:
+            try:
+                return getattr(self.h, mod_name)(sec=section)
+            except AttributeError as e:
+                raise LibraryError("'{}' point process not found ".format(mod_name)) from None
+            except TypeError as e:
+                if str(e).find("'dict_keys' object is not subscriptable") == -1:
+                    raise
+                else:
+                    raise LibraryError("'{}' is marked as a point process, but isn't a point process in the NEURON library".format(mod_name)) from None
         try:
             return section.insert(mod_name)
         except ValueError as e:
             if str(e).find("argument not a density mechanism name") != -1:
-                raise LibraryError(mod_name + " mechanism not found")
+                raise LibraryError("'{}' mechanism not found".format(mod_name)) from None
 
     def select(self, asset_name, glbl=False, pkg=None, variant=None):
         return self.resolver.set_preference(asset_name, glbl=glbl, pkg=pkg, variant=variant)
