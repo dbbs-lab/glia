@@ -140,16 +140,27 @@ class Glia:
                 raise LibraryError(mechanism + " mechanism could not be inserted.")
         return True
 
-    def insert(self, section, asset, pkg=None, variant=None):
+    def insert(self, section, asset, attributes=None, pkg=None, variant=None):
+        # Transform the given section into a NEURON section.
+        nrn_section = _transform(section)
         self.init_neuron()
         if asset.startswith("glia"):
             mod_name = asset
         else:
-            mod_name = self.resolver.resolve(asset, pkg, variant)
+            mod_name = self.resolver.resolve(asset, pkg=pkg, variant=variant)
         mod = self.resolver.lookup(mod_name)
-        if mod.is_point_process:
+        if mod.is_point_process:  # Insert point process
             try:
-                return getattr(self.h, mod_name)(sec=section)
+                # Get the point process factory from the hoc interpreter
+                point_process_factory = getattr(self.h, mod_name)
+                # Create a point process
+                point_process = point_process_factory(nrn_section())
+                if hasattr(section, "__add_point_process__"):
+                    section.__add_point_process__(point_process)
+                if attributes is not None:
+                    for key, value in attributes.items():
+                        setattr(point_process, key, value)
+                return point_process
             except AttributeError as e:
                 raise LibraryError("'{}' point process not found ".format(mod_name)) from None
             except TypeError as e:
@@ -157,11 +168,12 @@ class Glia:
                     raise
                 else:
                     raise LibraryError("'{}' is marked as a point process, but isn't a point process in the NEURON library".format(mod_name)) from None
-        try:
-            return section.insert(mod_name)
-        except ValueError as e:
-            if str(e).find("argument not a density mechanism name") != -1:
-                raise LibraryError("'{}' mechanism not found".format(mod_name)) from None
+        else:  # Insert mechanism
+            try:
+                return nrn_section.insert(mod_name)
+            except ValueError as e:
+                if str(e).find("argument not a density mechanism name") != -1:
+                    raise LibraryError("'{}' mechanism not found".format(mod_name)) from None
 
     def select(self, asset_name, glbl=False, pkg=None, variant=None):
         return self.resolver.set_preference(asset_name, glbl=glbl, pkg=pkg, variant=variant)
@@ -258,3 +270,13 @@ class Glia:
     def list_assets(self):
         print("Assets:", ", ".join(map(lambda e: e.name + ' (' + str(len(e)) + ')' ,self.resolver.index.values())))
         print("Packages:", ", ".join(map(lambda p: p.name, self.packages)))
+
+def _transform(obj):
+    # Transform an object to its NEURON counterpart, if possible, otherwise
+    # return the object itself.
+
+    # Does the given object expose a method to convert it into a  NEURON representation?
+    if hasattr(obj, "__neuron__"):
+        # Transform the given object into its NEURON representation.
+        obj = obj.__neuron__()
+    return obj

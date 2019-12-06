@@ -3,7 +3,6 @@ import os, sys
 __version__ = "0.1.5"
 
 
-
 glia_path = os.path.dirname(__file__)
 os.environ["GLIA_PATH"] = os.path.abspath(glia_path)
 if os.getenv("CI") and os.getenv("TRAVIS"):
@@ -31,8 +30,8 @@ except GliaError as e:
     print("GLIA ERROR", e)
     exit(1)
 
-def insert(section, asset, pkg=None, variant=None):
-    return manager.insert(section, asset, pkg=pkg, variant=variant)
+def insert(section, asset, attributes=None, pkg=None, variant=None):
+    return manager.insert(section, asset, attributes=attributes, pkg=pkg, variant=variant)
 
 def resolve(asset, pkg=None, variant=None):
     return manager.resolver.resolve(asset, pkg=pkg, variant=variant)
