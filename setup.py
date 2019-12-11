@@ -28,6 +28,7 @@ setuptools.setup(
         ]
      },
      install_requires = [
-        "setuptools"
+        "setuptools",
+        "nrn-patch>=0.0.2"
      ]
  )

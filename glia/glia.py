@@ -35,8 +35,8 @@ class Glia:
     def init_neuron(self):
         if hasattr(self, "h"):
             return
-        from neuron import h
-        self.h = h
+        from patch import p
+        self.h = p
         self.load_neuron_dll()
 
     def get_minimum_astro_version(self):
@@ -99,8 +99,8 @@ class Glia:
             raise NotImplementedError("Only linux and win32 are supported. You are using " + sys.platform)
 
     def _compile_windows(self, neuron_mod_path):
-        from neuron import h
-        nrn_path = h.neuronhome()
+        from patch import p
+        nrn_path = p.neuronhome()
         current_dir = os.getcwd()
         os.chdir(neuron_mod_path)
         cyg_path = nrn_path.replace(":\\","\\").replace("\\","/")

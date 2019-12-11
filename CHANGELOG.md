@@ -1,5 +1,9 @@
 # Version 0
 
+## 0.1.8
+
+* Switched to Patch's interpreter instead of NEURON's interpreter.
+
 ## 0.1.6
 
 * Fixed deployment issue
