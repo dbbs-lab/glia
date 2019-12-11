@@ -99,7 +99,8 @@ class Glia:
             raise NotImplementedError("Only linux and win32 are supported. You are using " + sys.platform)
 
     def _compile_windows(self, neuron_mod_path):
-        nrn_path = self.h.neuronhome()
+        from neuron import h
+        nrn_path = h.neuronhome()
         current_dir = os.getcwd()
         os.chdir(neuron_mod_path)
         cyg_path = nrn_path.replace(":\\","\\").replace("\\","/")
