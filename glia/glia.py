@@ -155,9 +155,7 @@ class Glia:
                 # Get the point process factory from the hoc interpreter
                 point_process_factory = getattr(self.h, mod_name)
                 # Create a point process
-                point_process = point_process_factory(nrn_section())
-                if hasattr(section, "__add_point_process__"):
-                    section.__add_point_process__(point_process)
+                point_process = self.h.PointProcess(point_process_factory, nrn_section())
                 if attributes is not None:
                     for key, value in attributes.items():
                         setattr(point_process, key, value)
