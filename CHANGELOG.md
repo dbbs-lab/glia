@@ -1,5 +1,9 @@
 # Version 0
 
+## 0.1.6
+
+* Fixed deployment issue
+
 ## 0.1.5
 
 * Added support for point_processes. Point processes and mechanisms can be
