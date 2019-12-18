@@ -33,3 +33,6 @@ class PackageModError(PackageError):
 
 class PackageVersionError(PackageError):
     pass
+
+class GliaApiError(GliaError):
+    pass

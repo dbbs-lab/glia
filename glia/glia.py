@@ -1,9 +1,10 @@
 import os, sys, pkg_resources, json, subprocess
 from shutil import copy2 as copy_file, rmtree as rmdir
 from .hash import get_directory_hash
-from .exceptions import GliaError, CompileError, LibraryError, NeuronError
+from .exceptions import *
 from .resolution import Resolver
 from .assets import Package, Mod
+import requests
 
 class Glia:
 
@@ -129,7 +130,7 @@ class Glia:
             raise CompileError(stderr.decode('UTF-8'))
 
     def install(self, command):
-        subprocess.call([sys.executable, "-m", "pip", "install", command])
+        subprocess.call([sys.executable, "-m", "pip", "install", "--index-url=https://pi.glia-pkg.org/", command])
 
     def test_mechanism(self, mechanism):
         self.init_neuron()
