@@ -12,6 +12,7 @@ install:
   - pip3 install -r requirements.txt
   # Install latest versions.
   - pip3 install coverage
+  - pip3 install -e .
   - pip3 install --index-url=https://pi.glia-pkg.org/ glia_test_mods
 script:
   - coverage run -m unittest discover -v -s ./tests
