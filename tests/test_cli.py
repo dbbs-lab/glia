@@ -36,3 +36,7 @@ class TestCLI(unittest.TestCase):
 
     def test_pkg_install(self):
         run_cli_command("list")
+
+    def test_show(self):
+        run_cli_command("show Kir2_3")
+        run_cli_command("show-pkg glia_test_mods")
