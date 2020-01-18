@@ -1,2 +1,5 @@
 [tool.black]
 line-length = 90
+
+[build-system]
+requires = ["setuptools", "wheel", "packaging"]
