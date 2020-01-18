@@ -1,4 +1,7 @@
 [![Build Status](https://travis-ci.org/dbbs-lab/glia.svg?branch=master)](https://travis-ci.org/dbbs-lab/glia)
+[![codecov](https://codecov.io/gh/dbbs-lab/glia/branch/master/graph/badge.svg)](https://codecov.io/gh/dbbs-lab/glia)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![Documentation Status](https://readthedocs.org/projects/nrn-glia/badge/?version=latest)](https://nrn-glia.readthedocs.io/en/latest/?badge=latest)
 
 # Glia: NEURON package manager
 
