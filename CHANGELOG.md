@@ -1,5 +1,12 @@
 # Version 0
 
+## 0.1.9
+
+* `glia install` installs exclusively from the GliaPI.
+* Point processes are wrapped when inserted.
+* Attributes can be set on mechanisms during insertion.
+* The repository switched to Black formatting and has coverage and RTD documentation.
+
 ## 0.1.8
 
 * Switched to Patch's interpreter instead of NEURON's interpreter.
