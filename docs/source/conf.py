@@ -24,6 +24,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(__file__, "..", "glia")))
 project = "Glia Packet Manager"
 copyright = "2020, Robin De Schepper"
 author = "Robin De Schepper"
+master_doc = "index"
 
 # The full version, including alpha/beta/rc tags
 release = "1.0.0"
