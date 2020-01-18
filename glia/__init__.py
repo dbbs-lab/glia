@@ -9,6 +9,7 @@ if os.getenv("CI") and os.getenv("TRAVIS"):
     sys.path.insert(0, "/usr/local/nrn/lib/python")
 try:
     import neuron
+
     os.environ["GLIA_NRN_AVAILABLE"] = "1"
 except Exception as e:
     os.environ["GLIA_NRN_AVAILABLE"] = "0"
@@ -16,6 +17,7 @@ except Exception as e:
 
 from .glia import Glia
 from .exceptions import GliaError, ResolveError, TooManyMatchesError
+
 manager = Glia()
 
 try:
@@ -30,14 +32,18 @@ except GliaError as e:
     print("GLIA ERROR", e)
     exit(1)
 
+
 def insert(section, asset, attributes=None, pkg=None, variant=None):
     return manager.insert(section, asset, attributes=attributes, pkg=pkg, variant=variant)
+
 
 def resolve(asset, pkg=None, variant=None):
     return manager.resolver.resolve(asset, pkg=pkg, variant=variant)
 
+
 def select(asset, pkg=None, variant=None):
     return manager.select(asset, pkg=pkg, variant=variant)
+
 
 def compile():
     return manager.compile()

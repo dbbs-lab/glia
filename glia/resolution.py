@@ -1,5 +1,10 @@
-from .exceptions import ResolveError, TooManyMatchesError, NoMatchesError, \
-    UnknownAssetError
+from .exceptions import (
+    ResolveError,
+    TooManyMatchesError,
+    NoMatchesError,
+    UnknownAssetError,
+)
+
 
 class IndexEntry:
     def __init__(self, name):
@@ -18,8 +23,8 @@ class IndexEntry:
     def append(self, asset):
         self.items.append(asset)
 
-class Resolver:
 
+class Resolver:
     def __init__(self, manager):
         self.manager = manager
         self.global_preferences = self.manager.read_preferences()
@@ -41,7 +46,11 @@ class Resolver:
 
     def resolve(self, asset_name, pkg=None, variant=None):
         if not asset_name in self.index:
-            raise UnknownAssetError("Selection could not be resolved: Asset '{}' not found.".format(asset_name))
+            raise UnknownAssetError(
+                "Selection could not be resolved: Asset '{}' not found.".format(
+                    asset_name
+                )
+            )
 
         # Try resolving with preference
         resolved = self.resolve_preference(asset_name, pkg=pkg, variant=variant)
@@ -92,8 +101,9 @@ class Resolver:
     def _resolve_multi(self, resolved, asset_name, pkg, variant):
         # If all candidates are from the same package, and 1 is the default variant
         # then return that default variant
-        if all(map(lambda m: m.pkg_name == resolved[0].pkg_name, resolved)) \
-          and any(map(lambda m: m.variant == "0", resolved)):
+        if all(map(lambda m: m.pkg_name == resolved[0].pkg_name, resolved)) and any(
+            map(lambda m: m.variant == "0", resolved)
+        ):
             return list(filter(lambda m: m.variant == "0", resolved))[0].mod_name
         criterium = asset_name
         if pkg:
@@ -101,9 +111,11 @@ class Resolver:
         if variant:
             criterium += " ({})".format(variant)
         raise TooManyMatchesError(
-            "Selection could not be resolved, too many matches for '{}':\n  * ".format(criterium) +
-            "\n  * ".join(list(map(lambda r: r.mod_name, resolved))) +
-            '\n Try specifying a package or variant'
+            "Selection could not be resolved, too many matches for '{}':\n  * ".format(
+                criterium
+            )
+            + "\n  * ".join(list(map(lambda r: r.mod_name, resolved)))
+            + "\n Try specifying a package or variant"
         )
 
     def has_preference(self, asset_name):
