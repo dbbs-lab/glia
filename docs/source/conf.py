@@ -1,6 +1,6 @@
 import os, sys
 
-sys.path.insert(0, os.path.abspath("../glia"))
+sys.path.insert(0, os.path.abspath(os.path.join(__file__, "..", "glia")))
 
 # Configuration file for the Sphinx documentation builder.
 #
