@@ -3,35 +3,10 @@ import unittest, os, sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 
-def execute_command(cmnd):
-    import subprocess
-
-    process = subprocess.Popen(cmnd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    std_out_str, std_err_str = "", ""
-    for c in iter(lambda: process.stdout.read(1), b""):
-        s = c.decode("UTF-8")
-        sys.stdout.write(s)
-        std_out_str += s
-    for c in iter(lambda: process.stderr.read(1), b""):
-        s = c.decode("UTF-8")
-        std_err_str += s
-    return process, std_out_str, std_err_str
-
-
 class TestPackageDiscovery(unittest.TestCase):
     """
         Check if packages can be discovered.
     """
-
-    @classmethod
-    def setUpClass(self):
-        process, _, _ = execute_command(["pip3", "install", "glia_test_mods"])
-        process.communicate()
-
-    @classmethod
-    def tearDownClass(self):
-        process, _, _ = execute_command(["pip3", "uninstall", "glia_test_mods", "-y"])
-        process.communicate()
 
     def test_discovery(self):
         import glia
@@ -60,16 +35,16 @@ class TestPackageDiscovery(unittest.TestCase):
         import glia as g
 
         # Test mechanism insertion
-        self.assertTrue(g.manager.test_mechanism("cdp5_CR"))
-        self.assertTrue(g.manager.test_mechanism("Kir23"))
+        self.assertTrue(g.manager.test_mechanism("cdp5"))
+        self.assertTrue(g.manager.test_mechanism("Kir2_3"))
 
         # Test mechanism attributes
-        g.manager.insert(p.Section(), "Kir23", attributes={"gkbar": 30})
+        g.manager.insert(p.Section(), "Kir2_3", attributes={"gkbar": 30})
         self.assertRaises(
             AttributeError,
             g.manager.insert,
             p.Section(),
-            "Kir23",
+            "Kir2_3",
             attributes={"doesntexist": 30},
         )
 
