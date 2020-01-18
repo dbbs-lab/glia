@@ -1,6 +1,14 @@
 glia package
 ============
 
+Module contents
+---------------
+
+.. automodule:: glia
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 glia.assets module
 ------------------
 
@@ -45,15 +53,6 @@ glia.resolution module
 ----------------------
 
 .. automodule:: glia.resolution
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-
-Module contents
----------------
-
-.. automodule:: glia
    :members:
    :undoc-members:
    :show-inheritance:
