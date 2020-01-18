@@ -17,14 +17,6 @@ glia.assets module
    :undoc-members:
    :show-inheritance:
 
-glia.cli module
----------------
-
-.. automodule:: glia.cli
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 glia.exceptions module
 ----------------------
 

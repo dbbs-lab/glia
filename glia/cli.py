@@ -135,7 +135,7 @@ def select(asset, pkg=None, variant=None, glbl=False):
 ## Prints
 
 
-class colors:
+class _colors:
     HEADER = "\033[95m"
     OKBLUE = "\033[94m"
     OKGREEN = "\033[92m"
@@ -183,7 +183,7 @@ def _show_pkg(pkg_name):
         if sys.platform == "win32":
             pstr = "Package: " + candidate.name
         else:
-            pstr = "Package: " + colors.OKGREEN + candidate.name + colors.ENDC
+            pstr = "Package: " + _colors.OKGREEN + candidate.name + _colors.ENDC
         print(pstr)
         print("=" * len(pstr))
         print("Path: " + candidate.path)
