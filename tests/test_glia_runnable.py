@@ -1,4 +1,4 @@
-import unittest, os, sys
+import unittest, os, sys, importlib
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
@@ -12,6 +12,17 @@ class TestPackageDiscovery(unittest.TestCase):
         import glia
 
         self.assertGreater(len(glia.manager.packages), 0)
+
+    def test_reload(self):
+        import glia
+
+        ldll = os.getenv("GLIA_NO_AUTOLOAD_DLL")
+        os.environ["GLIA_NO_AUTOLOAD_DLL"] = "TRUE"
+        importlib.reload(glia)
+        if ldll:
+            os.environ["GLIA_NO_AUTOLOAD_DLL"] = ldll
+        else:
+            del os.environ["GLIA_NO_AUTOLOAD_DLL"]
 
     def test_caching(self):
         import glia
