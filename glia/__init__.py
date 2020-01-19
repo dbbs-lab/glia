@@ -5,8 +5,10 @@ __version__ = "0.1.9"
 
 glia_path = os.path.dirname(__file__)
 os.environ["GLIA_PATH"] = os.path.abspath(glia_path)
+# Fix for PATH on Travis CI.
 if os.getenv("CI") and os.getenv("TRAVIS"):
     sys.path.insert(0, "/usr/local/nrn/lib/python")
+# Try importing neuron, if it fails, mark it as unavailable
 try:
     import neuron
 
@@ -18,6 +20,7 @@ except Exception as e:
 from .glia import Glia
 from .exceptions import GliaError, ResolveError, TooManyMatchesError
 
+# Initialize the manager
 manager = Glia()
 
 try:
@@ -27,7 +30,7 @@ try:
         if os.getenv("GLIA_NRN_AVAILABLE") == "0":
             raise Exception("Cannot start Glia without NEURON installed.")
         else:
-            manager.start()
+            manager.start(load_dll=not bool(os.getenv("GLIA_NO_AUTOLOAD_DLL")))
 except GliaError as e:
     print("GLIA ERROR", e)
     exit(1)

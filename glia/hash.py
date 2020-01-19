@@ -10,8 +10,8 @@ def hash_update_from_file(filename, hash):
     return hash
 
 
-def hash_file(filename):
-    return hash_update_from_file(filename, hashlib.hash()).hexdigest()
+def hash_file(filename):  # pragma: nocover
+    return hash_update_from_file(filename, hashlib.md5()).hexdigest()
 
 
 def hash_update_from_dir(directory, hash):
@@ -20,7 +20,7 @@ def hash_update_from_dir(directory, hash):
         hash.update(path.name.encode())
         if path.is_file():
             hash = hash_update_from_file(path, hash)
-        elif path.is_dir():
+        elif path.is_dir():  # pragma: nocover
             hash = hash_update_from_dir(path, hash)
     return hash
 

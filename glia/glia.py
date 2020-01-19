@@ -30,17 +30,18 @@ class Glia:
     def path(*subfolders):
         return os.path.abspath(os.path.join(os.environ["GLIA_PATH"], *subfolders))
 
-    def start(self):
+    def start(self, load_dll=True):
         self.compile(check_cache=True)
-        self.init_neuron()
+        self.init_neuron(load_dll=load_dll)
 
-    def init_neuron(self):
+    def init_neuron(self, load_dll=True):
         if hasattr(self, "h"):
             return
         from patch import p
 
         self.h = p
-        self.load_neuron_dll()
+        if load_dll:
+            self.load_neuron_dll()
 
     def get_minimum_astro_version(self):
         return "0.0.3"
@@ -281,7 +282,7 @@ class Glia:
                     ) from None
         else:  # Insert mechanism
             try:
-                r = nrn_section.insert(mod_name)
+                r = section.insert(mod_name)
                 for attribute, value in attributes.items():
                     setattr(nrn_section, attribute + "_" + mod_name, value)
                 return r

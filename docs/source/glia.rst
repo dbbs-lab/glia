@@ -1,6 +1,3 @@
-glia package
-============
-
 Module contents
 ---------------
 
@@ -17,26 +14,10 @@ glia.assets module
    :undoc-members:
    :show-inheritance:
 
-glia.exceptions module
-----------------------
-
-.. automodule:: glia.exceptions
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 glia.glia module
 ----------------
 
 .. automodule:: glia.glia
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-glia.hash module
-----------------
-
-.. automodule:: glia.hash
    :members:
    :undoc-members:
    :show-inheritance:
