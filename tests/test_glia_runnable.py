@@ -32,9 +32,11 @@ class TestPackageDiscovery(unittest.TestCase):
 
     def test_insert(self):
         from patch import p
+        import patch.objects
         import glia as g
 
         # Test mechanism insertion
+        self.assertEqual(type(g.insert(p.Section(), "cdp5")), patch.objects.Section)
         self.assertTrue(g.manager.test_mechanism("cdp5"))
         self.assertTrue(g.manager.test_mechanism("Kir2_3"))
 
