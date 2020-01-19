@@ -20,6 +20,9 @@ Welcome to Glia Packet Manager's documentation!
    :maxdepth: 2
    :caption: Contents:
 
+   self
+   usage
+   env
    modules
 
 
