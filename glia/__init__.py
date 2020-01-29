@@ -1,6 +1,14 @@
+"""
+ _____ _ _
+|   __| |_|___
+|  |  | | | .'|
+|_____|_|_|__,|
+
+"""
+
 import os, sys
 
-__version__ = "0.1.10"
+__version__ = "0.1.11"
 
 
 glia_path = os.path.dirname(__file__)

@@ -24,6 +24,6 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     entry_points={"console_scripts": ["glia = glia.cli:glia_cli"]},
-    install_requires=["setuptools", "nrn-patch>=0.0.2", "requests"],
+    install_requires=["setuptools", "nrn-patch>=1.0.2", "requests", "packaging>=19.0"],
     extras_require={"dev": ["sphinx", "pre-commit"]},
 )
