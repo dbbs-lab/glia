@@ -49,7 +49,9 @@ class Package:
 
 
 class Mod:
-    def __init__(self, pkg, name, variant, is_point_process=False):
+    def __init__(
+        self, pkg, name, variant, is_point_process=False, is_artificial_cell=False
+    ):
         self.pkg = pkg
         self.pkg_name = pkg.name
         self.namespace = "glia__" + pkg.name
@@ -59,8 +61,12 @@ class Mod:
 
     @classmethod
     def from_remote(cls, package, remote_object):
-        excluded = ["pkg_name", "asset_name", "namespace", "pkg"]
-        key_map = {"asset_name": "name", "_is_point_process": "is_point_process"}
+        excluded = ["pkg_name", "asset_name", "namespace", "pkg", "_name_statement"]
+        key_map = {
+            "asset_name": "name",
+            "_is_point_process": "is_point_process",
+            "_is_artificial_cell": "is_artificial_cell",
+        }
         required = ["asset_name", "variant"]
         kwargs = {}
         # Copy over allowed

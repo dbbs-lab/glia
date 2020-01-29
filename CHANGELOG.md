@@ -1,5 +1,9 @@
 # Version 0
 
+## 0.1.10
+
+* Added support for ARTIFICIAL_CELL mods.
+
 ## 0.1.9
 
 * `glia install` installs exclusively from the GliaPI.
