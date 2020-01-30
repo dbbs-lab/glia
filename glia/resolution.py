@@ -101,7 +101,7 @@ class Resolver:
         else:
             return self._reverse_lookup[mod_name]
 
-    def _get_final_pv(asset_name, pkg, variant):
+    def _get_final_pv(self, asset_name, pkg, variant):
         """
             Get final package and variant preference.
 
