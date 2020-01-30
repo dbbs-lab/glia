@@ -1,4 +1,4 @@
-from importlib import contextmanager
+from contextlib import contextmanager
 from .exceptions import (
     ResolveError,
     TooManyMatchesError,
