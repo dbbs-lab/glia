@@ -1,3 +1,4 @@
+from importlib import contextmanager
 from .exceptions import (
     ResolveError,
     TooManyMatchesError,
@@ -134,6 +135,20 @@ class Resolver:
             self.manager.write_preferences(self.global_preferences)
         else:
             self.local_preferences[asset_name] = preference
+
+    @contextmanager
+    def preference_context(self, assets=None, pkg=None, variant=None):
+        if assets is None:
+            assets = {}
+        if pkg is not None:
+            assets["__pkg"] = pkg
+        if variant is not None:
+            assets["__variant"] = variant
+        id = self._stack_preference(assets)
+        try:
+            yield
+        finally:
+            self._pop_preference(id)
 
     def _preferences(self):
         pref = self.global_preferences.copy()
