@@ -189,13 +189,13 @@ class Resolver:
         finally:
             self._pop_preference_context(id)
 
-    def _stack_preference_context(assets):
+    def _stack_preference_context(self, assets):
         id = self.__next_stack_id
         self.__next_stack_id += 1
         self.__preference_stack[id] = assets
         return id
 
-    def _pop_preference_context(id):
+    def _pop_preference_context(self, id):
         del self.__preference_stack[id]
 
     def _preferences(self):
