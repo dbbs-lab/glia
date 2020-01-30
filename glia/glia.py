@@ -310,7 +310,7 @@ class Glia:
         )
 
     def context(self, assets=None, pkg=None, variant=None):
-        return self.resolver.contex
+        return self.resolver.preference_context(assets=assets, pkg=pkg, variant=variant)
 
     def load_neuron_dll(self):
         if not hasattr(self, "_dll_result") or not self._dll_loaded:
