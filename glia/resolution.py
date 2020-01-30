@@ -25,6 +25,10 @@ class IndexEntry:
         self.items.append(asset)
 
 
+class _NoPreferenceError(Exception):
+    pass
+
+
 class Resolver:
     def __init__(self, manager):
         self.manager = manager
@@ -60,8 +64,8 @@ class Resolver:
         if not resolved is None:
             return resolved.mod_name
 
-        # If there was no preference, or if the preference couldn't provide the
-        # selection criteria, try resolving without preference.
+        # If there was no preference, or if the preference couldn't resolve, try resolving
+        # without preference.
         resolved = self._get_resolved(asset_name, pkg, variant)
         if len(resolved) == 0:
             raise NoMatchesError("Selection could not be resolved.")
@@ -71,20 +75,24 @@ class Resolver:
         return resolve_name
 
     def resolve_preference(self, asset_name, pkg=None, variant=None):
-        preferences = self._preferences()
-        if not asset_name in preferences:
+        # Combine global, script, context & local preferences to obtain package and variant.
+        try:
+            pkg, variant = self._get_final_pv(asset_name, pkg, variant)
+        except _NoPreferenceError:
+            # No preferences found.
             return None
-        preference = preferences[asset_name]
-        if pkg is None and "package" in preference:
-            pkg = preference["package"]
-        if variant is None and "variant" in preference:
-            variant = preference["variant"]
+
+        # Resolve the preferred package and variant
         resolved = self._get_resolved(asset_name, pkg, variant)
         if len(resolved) == 1:
+            # Exactly 1 candidate found. Return it.
             return resolved[0]
         elif len(resolved) > 1:
+            # Multiple candidates found, check if one obvious candidate stands out,
+            # if not throw TooManyMatchesError.
             return self._resolve_multi(resolved, asset_name, pkg, variant)
         else:
+            # No candidates found.
             return None
 
     def lookup(self, mod_name):
@@ -92,6 +100,37 @@ class Resolver:
             raise LookupError("No mod with name '{}' found".format(mod_name))
         else:
             return self._reverse_lookup[mod_name]
+
+    def _get_final_pv(asset_name, pkg, variant):
+        """
+            Get final package and variant preference.
+
+            This function fetches all preferences and checks whether there's specific package
+            or variant preferences. If not it checks the general package or variant preferences
+            not specific to the asset.
+        """
+        # Fetch global, script & context preferences
+        preferences = self._preferences()
+        if not asset_name in preferences:
+            # No specific asset preferences found, but maybe general package or variant
+            # preferences apply?
+            if self._has_general_preferences(preferences):
+                # Get the general package and variant preferences
+                p_pkg, p_variant = self._general_preferences(preferences, pkg, variant)
+                if pkg is None:
+                    pkg = p_pkg
+                if variant is None:
+                    variant = p_variant
+            else:
+                # No preferences of any sort found.
+                raise _NoPreferenceError()
+        else:
+            preference = preferences[asset_name]
+            if pkg is None and "package" in preference:
+                pkg = preference["package"]
+            if variant is None and "variant" in preference:
+                variant = preference["variant"]
+        return pkg, variant
 
     def _get_resolved(self, asset_name, pkg, variant):
         mods = iter(self.index[asset_name])
@@ -144,13 +183,50 @@ class Resolver:
             assets["__pkg"] = pkg
         if variant is not None:
             assets["__variant"] = variant
-        id = self._stack_preference(assets)
+        id = self._stack_preference_context(assets)
         try:
             yield
         finally:
-            self._pop_preference(id)
+            self._pop_preference_context(id)
+
+    def _stack_preference_context(assets):
+        id = self.__next_stack_id
+        self.__next_stack_id += 1
+        self.__preference_stack[id] = assets
+        return id
+
+    def _pop_preference_context(id):
+        del self.__preference_stack[id]
 
     def _preferences(self):
         pref = self.global_preferences.copy()
         pref.update(self.local_preferences)
+        pref = self._apply_preference_stack(pref)
         return pref
+
+    def _apply_preference_stack(self, base_pref):
+        def combine(asset, old, new):
+            if asset == "__pkg" or asset == "__variant":
+                return new or old
+            if "unset" in new and new["unset"]:
+                old["package"] = None
+                old["variant"] = None
+            if "package" in new and new["package"] is not None:
+                old["package"] = new["package"]
+            if "variant" in new and new["variant"] is not None:
+                old["variant"] = new["variant"]
+            return old
+
+        compiled_preferences = {}
+        for stacked_preference in self.__preference_stack.values():
+            for asset, preference in stacked_preference.items():
+                if asset not in compiled_preferences:
+                    if asset == "__pkg" or asset == "__variant":
+                        compiled_preferences[asset] = preference
+                    else:
+                        compiled_preferences[asset] = {"package": None, "variant": None}
+                compiled_preferences[asset] = combine(
+                    asset, compiled_preferences[asset], preference
+                )
+        base_pref.update(compiled_preferences)
+        return base_pref
