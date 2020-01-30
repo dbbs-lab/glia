@@ -105,9 +105,9 @@ class Resolver:
         """
             Get final package and variant preference.
 
-            This function fetches all preferences and checks whether there's specific package
-            or variant preferences. If not it checks the general package or variant preferences
-            not specific to the asset.
+            This function fetches all preferences and checks whether there's specific
+            package or variant preferences. If not it checks the general package or
+            variant preferences not specific to the asset.
         """
         # Fetch global, script & context preferences
         preferences = self._preferences()
@@ -139,6 +139,18 @@ class Resolver:
         if variant:
             mods = filter(lambda m: m.variant == variant, mods)
         return list(mods)
+
+    def _has_general_preferences(self, preferences):
+        return ("__pkg" in preferences and preferences["__pkg"]) or (
+            "__variant" in preferences and preferences["__variant"]
+        )
+
+    def _general_preferences(self, preferences, pkg, variant):
+        return (
+            pkg or (("__pkg" in preferences and preferences["__pkg"]) or None),
+            variant
+            or (("__variant" in preferences and preferences["__variant"]) or None),
+        )
 
     def _resolve_multi(self, resolved, asset_name, pkg, variant):
         # If all candidates are from the same package, and 1 is the default variant
