@@ -29,6 +29,8 @@ class Resolver:
         self.manager = manager
         self.global_preferences = self.manager.read_preferences()
         self.local_preferences = {}
+        self.__preference_stack = {}
+        self.__next_stack_id = 0
         # self.index = self.manager.read_index()
         self.construct_index()
 
