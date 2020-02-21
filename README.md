@@ -55,11 +55,13 @@ one you require. You can do so by setting your asset preferences.
 
 # Asset preferences
 
-There are 3 different scopes for providing asset preferences:
+There are 4 different scopes for providing asset preferences:
 
   - **Global scope:** Selects a default mechanism asset everywhere.
   - **Script scope:** Selects a default mechanism asset for the
     remainder of the Python script.
+  - **Context scope:** Select a preferred package or variant for all
+    `glia.insert` calls within the context block.
   - **Single use:** Selects a mechanism asset for a single `glia.insert`
     call
 
@@ -70,6 +72,33 @@ insert:
 
 ``` python
 g.insert('Kv1', pkg='not_my_models', variant='high_activity')
+```
+
+## Context scope
+
+Any `glia.insert` or `glia.resolve` call within the with statement will
+preferably use the given package or variant:
+
+``` python
+from patch import p
+s = p.Section()
+with g.context(pkg=not_my_models):
+  g.insert(s, 'Kv1')
+  g.insert(s, 'Kv1', variant='high_activity')
+```
+
+You can also specify a dictionary of asset-specific preferences during
+the with statement:
+
+``` python
+from patch import p
+s = p.Section()
+with g.context(assets={
+   'Kv1': {'package': 'not_my_models', 'variant': 'high_activity'},
+   'HCN1': {'variant': 'revised'}
+}, package='some_pkg_name'):
+  g.insert(s, 'Kv1')
+  g.insert(s, 'HCN1')
 ```
 
 ## Script scope
