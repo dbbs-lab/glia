@@ -1,5 +1,13 @@
 # Version 0
 
+## 0.2.0
+
+* Added contextual preferences and general preferences.
+  * Contextual preferences are nestable `with glia.context(...):` statements that keep
+    a preference until the with block is exited.
+  * General preferences are preferences that apply to all assets. They can currently only
+    be set using contextual preferences.
+
 ## 0.1.11
 
 * Added `packaging` to `install_requires`

@@ -8,7 +8,7 @@
 
 import os, sys
 
-__version__ = "0.1.11"
+__version__ = "0.2.0"
 
 
 glia_path = os.path.dirname(__file__)
@@ -90,3 +90,10 @@ def compile():
         Compile and test all mod files found in all Glia packages.
     """
     return manager.compile()
+
+
+def context(assets=None, pkg=None, variant=None):
+    """
+        Creates a context that sets glia preferences during a `with` statement.
+    """
+    return manager.context(assets=assets, pkg=pkg, variant=variant)

@@ -263,7 +263,7 @@ class Glia:
                 # Get the point process factory from the hoc interpreter
                 point_process_factory = getattr(self.h, mod_name)
                 # Create a point process
-                point_process = self.h.PointProcess(point_process_factory, nrn_section(x))
+                point_process = self.h.PointProcess(point_process_factory, section(x))
                 for key, value in attributes.items():
                     setattr(point_process, key, value)
                 return point_process
@@ -308,6 +308,9 @@ class Glia:
         return self.resolver.set_preference(
             asset_name, glbl=glbl, pkg=pkg, variant=variant
         )
+
+    def context(self, assets=None, pkg=None, variant=None):
+        return self.resolver.preference_context(assets=assets, pkg=pkg, variant=variant)
 
     def load_neuron_dll(self):
         if not hasattr(self, "_dll_result") or not self._dll_loaded:
