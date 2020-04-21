@@ -198,7 +198,6 @@ class Glia:
                 "-m",
                 "pip",
                 "install",
-                "--index-url=https://pi.glia-pkg.org/",
                 command,
             ]
         )
