@@ -5,6 +5,8 @@ jobs:
     - name: "Python 3.7.0 on Xenial Linux"
       python: 3.7
       before_install:
+        - sudo apt-get update
+        - sudo apt-get install libopenmpi-dev
         - wget https://neuron.yale.edu/ftp/neuron/versions/v7.7/nrn-7.7.x86_64-linux.deb
         - sudo dpkg -i nrn-7.7.x86_64-linux.deb
 install:
@@ -13,7 +15,7 @@ install:
   # Install latest versions.
   - pip3 install coverage
   - pip3 install -e .
-  - pip3 install --index-url=https://pi.glia-pkg.org/ glia_test_mods
+  - pip3 install glia_test_mods
 script:
   - coverage run -m unittest discover -v -s ./tests
 after_success:
