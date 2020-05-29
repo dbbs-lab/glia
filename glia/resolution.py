@@ -37,16 +37,16 @@ class _NoPreferenceError(Exception):
 
 class Resolver:
     def __init__(self, manager):
-        self.manager = manager
-        self.global_preferences = self.manager.read_preferences()
+        self._manager = manager
+        self.global_preferences = self._manager.read_preferences()
         self.local_preferences = {}
         self.__preference_stack = {}
         self.__next_stack_id = 0
-        # self.index = self.manager.read_index()
+        # self.index = self._manager.read_index()
         self.construct_index()
 
     def construct_index(self):
-        packages = self.manager.packages
+        packages = self._manager.packages
         self.index = {}
         self._reverse_lookup = {}
         for pkg in packages:
@@ -189,7 +189,7 @@ class Resolver:
             preference["variant"] = variant
         if glbl:
             self.global_preferences[asset_name] = preference
-            self.manager.write_preferences(self.global_preferences)
+            self._manager.write_preferences(self.global_preferences)
         else:
             self.local_preferences[asset_name] = preference
 

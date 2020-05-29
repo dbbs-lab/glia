@@ -11,7 +11,7 @@ class TestPackageDiscovery(unittest.TestCase):
     def test_discovery(self):
         import glia
 
-        self.assertGreater(len(glia.manager.packages), 0)
+        self.assertGreater(len(glia._manager.packages), 0)
 
     def test_reload(self):
         import glia
@@ -27,7 +27,7 @@ class TestPackageDiscovery(unittest.TestCase):
     def test_caching(self):
         import glia
 
-        cache = glia.manager.read_cache()
+        cache = glia._manager.read_cache()
         # Check whether the directory hash for `glia_test_mods` is present.
         self.assertTrue(
             any([h.find("glia_test_mods") != -1 for h in cache["mod_hashes"].keys()])
@@ -37,9 +37,9 @@ class TestPackageDiscovery(unittest.TestCase):
         import glia
         from glob import glob
 
-        path = glia.manager.get_neuron_mod_path()
+        path = glia._manager.get_neuron_mod_path()
         self.assertEqual(len(glob(os.path.join(path, "*.mod"))), 3)
-        self.assertEqual(len(glob(glia.manager.get_library())), 1)
+        self.assertEqual(len(glob(glia._manager.get_library())), 1)
 
     def test_insert(self):
         from patch import p
@@ -48,14 +48,14 @@ class TestPackageDiscovery(unittest.TestCase):
 
         # Test mechanism insertion
         self.assertEqual(type(g.insert(p.Section(), "cdp5")), patch.objects.Section)
-        self.assertTrue(g.manager.test_mechanism("cdp5"))
-        self.assertTrue(g.manager.test_mechanism("Kir2_3"))
+        self.assertTrue(g._manager.test_mechanism("cdp5"))
+        self.assertTrue(g._manager.test_mechanism("Kir2_3"))
 
         # Test mechanism attributes
-        g.manager.insert(p.Section(), "Kir2_3", attributes={"gkbar": 30})
+        g._manager.insert(p.Section(), "Kir2_3", attributes={"gkbar": 30})
         self.assertRaises(
             AttributeError,
-            g.manager.insert,
+            g._manager.insert,
             p.Section(),
             "Kir2_3",
             attributes={"doesntexist": 30},
