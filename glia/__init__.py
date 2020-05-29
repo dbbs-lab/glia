@@ -1,11 +1,3 @@
-"""
- _____ _ _
-|   __| |_|___
-|  |  | | | .'|
-|_____|_|_|__,|
-
-"""
-
 import os, sys
 
 __version__ = "0.2.1"
@@ -14,8 +6,8 @@ __version__ = "0.2.1"
 glia_path = os.path.dirname(__file__)
 os.environ["GLIA_PATH"] = os.path.abspath(glia_path)
 # Fix for PATH on Travis CI.
-if os.getenv("CI") and os.getenv("TRAVIS"):
-    sys.path.insert(0, "/usr/local/nrn/lib/python")
+if os.getenv("GLIA_NRN_PATH", None):
+    sys.path.insert(0, os.getenv("GLIA_NRN_PATH"))
 # Try importing neuron, if it fails, mark it as unavailable
 try:
     import neuron
