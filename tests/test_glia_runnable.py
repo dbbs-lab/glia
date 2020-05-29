@@ -13,17 +13,6 @@ class TestPackageDiscovery(unittest.TestCase):
 
         self.assertGreater(len(glia._manager.packages), 0)
 
-    def test_reload(self):
-        import glia
-
-        ldll = os.getenv("GLIA_NO_AUTOLOAD_DLL")
-        os.environ["GLIA_NO_AUTOLOAD_DLL"] = "TRUE"
-        importlib.reload(glia)
-        if ldll:
-            os.environ["GLIA_NO_AUTOLOAD_DLL"] = ldll
-        else:
-            del os.environ["GLIA_NO_AUTOLOAD_DLL"]
-
     def test_caching(self):
         import glia
 
