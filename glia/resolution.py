@@ -1,9 +1,3 @@
-"""
-    Resolves package, mechanism and variant constraints into asset names that can be
-    requested from the Glia library.
-"""
-
-
 from contextlib import contextmanager
 from .exceptions import (
     ResolveError,

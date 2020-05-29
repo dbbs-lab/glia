@@ -1,7 +1,7 @@
 import unittest, os, sys, argparse
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-import glia._cli
+import glia.cli
 
 # Duck punch the argument parser so it doesn't sys.exit
 def on_argparse_error(self, message):
@@ -15,7 +15,7 @@ def run_cli_command(command):
     argv = sys.argv
     sys.argv = command.split(" ")
     sys.argv.insert(0, "test_cli_command")
-    result = glia._cli.glia_cli()
+    result = glia.cli.glia_cli()
     sys.argv = argv
     return result
 

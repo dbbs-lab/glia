@@ -1,12 +1,47 @@
+"""
+ _____ _ _
+|   __| |_|___
+|  |  | | | .'|
+|_____|_|_|__,|
+
+"""
+
 import os, sys
 
-__version__ = "0.3.0"
+__version__ = "0.2.1"
 
-from ._glia import Glia
-from .exceptions import *
+
+glia_path = os.path.dirname(__file__)
+os.environ["GLIA_PATH"] = os.path.abspath(glia_path)
+# Fix for PATH on Travis CI.
+if os.getenv("CI") and os.getenv("TRAVIS"):
+    sys.path.insert(0, "/usr/local/nrn/lib/python")
+# Try importing neuron, if it fails, mark it as unavailable
+try:
+    import neuron
+
+    os.environ["GLIA_NRN_AVAILABLE"] = "1"
+except Exception as e:
+    os.environ["GLIA_NRN_AVAILABLE"] = "0"
+
+
+from .glia import Glia
+from .exceptions import GliaError, ResolveError, TooManyMatchesError
 
 # Initialize the manager
-_manager = Glia()
+manager = Glia()
+
+try:
+    if not os.getenv("GLIA_NO_INSTALL"):
+        if not manager._is_installed():
+            manager._install_self()
+        if os.getenv("GLIA_NRN_AVAILABLE") == "0":
+            raise Exception("Cannot start Glia without NEURON installed.")
+        else:
+            manager.start(load_dll=not bool(os.getenv("GLIA_NO_AUTOLOAD_DLL")))
+except GliaError as e:
+    print("GLIA ERROR", e)
+    exit(1)
 
 
 def insert(section, asset, attributes=None, pkg=None, variant=None, x=0.5):
@@ -27,13 +62,13 @@ def insert(section, asset, attributes=None, pkg=None, variant=None, x=0.5):
         :type x: float
         :raises: LibraryError if the asset isn't found or was incorrectly marked as a point process.
     """
-    return _manager.insert(
+    return manager.insert(
         section, asset, attributes=attributes, pkg=pkg, variant=variant, x=x
     )
 
 
 def resolve(asset, pkg=None, variant=None):
-    return _manager.resolver.resolve(asset, pkg=pkg, variant=variant)
+    return manager.resolver.resolve(asset, pkg=pkg, variant=variant)
 
 
 def select(asset, pkg=None, variant=None):
@@ -47,18 +82,18 @@ def select(asset, pkg=None, variant=None):
         :param variant: Name of the variant to prefer.
         :type variant: string
     """
-    return _manager.select(asset, pkg=pkg, variant=variant)
+    return manager.select(asset, pkg=pkg, variant=variant)
 
 
 def compile():
     """
         Compile and test all mod files found in all Glia packages.
     """
-    return _manager.compile()
+    return manager.compile()
 
 
 def context(assets=None, pkg=None, variant=None):
     """
         Creates a context that sets glia preferences during a `with` statement.
     """
-    return _manager.context(assets=assets, pkg=pkg, variant=variant)
+    return manager.context(assets=assets, pkg=pkg, variant=variant)
