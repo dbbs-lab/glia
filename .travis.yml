@@ -15,7 +15,7 @@ install:
   # Install latest versions.
   - pip3 install coverage
   - pip3 install -e .
-  - pip3 install glia_test_mods
+  - pip3 install glia_test_mods>=0.0.2
 script:
   - coverage run -m unittest discover -v -s ./tests
 after_success:
