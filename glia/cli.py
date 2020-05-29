@@ -1,18 +1,13 @@
 import os, sys, argparse
 
-glia_pkg = globals()["__package__"]
+glia_pkg = __package__
 if glia_pkg is None:
     sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
     import glia
 else:
     import glia
 
-from glia.exceptions import (
-    GliaError,
-    TooManyMatchesError,
-    UnknownAssetError,
-    LibraryError,
-)
+from .exceptions import *
 
 
 def glia_cli():
@@ -83,7 +78,7 @@ def glia_cli():
             cl_args.func(cl_args)
         except GliaError as e:
             print("GLIA ERROR", str(e))
-            exit(1)
+            sys.exit(1)
 
 
 def install_package(args):
