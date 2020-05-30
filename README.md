@@ -88,4 +88,67 @@ g.insert('Kv1', pkg='not_my_models', variant='high_activity')
 
 ## Context scope
 
-Any `glia.insert` or `glia.resolve` call within the with stat
+Any `glia.insert` or `glia.resolve` call within the with statement will
+preferably use the given package or variant:
+
+``` python
+from patch import p
+s = p.Section()
+with g.context(pkg='not_my_models'):
+  g.insert(s, 'Kv1')
+  g.insert(s, 'Kv1', variant='high_activity')
+```
+
+You can also specify a dictionary multiple asset-specific preferences:
+
+``` python
+from patch import p
+s = p.Section()
+with g.context(assets={
+   'Kv1': {'package': 'not_my_models', 'variant': 'high_activity'},
+   'HCN1': {'variant': 'revised'}
+}):
+  g.insert(s, 'Kv1')
+  g.insert(s, 'HCN1')
+```
+
+And you can even combine, preferring a certain package unless the
+dictionary specifies otherwise:
+
+``` python
+from patch import p
+s = p.Section()
+with g.context(assets={
+   'Kv1': {'package': 'not_my_models', 'variant': 'high_activity'},
+   'HCN1': {'variant': 'revised'}
+}, package='some_pkg_name'):
+  g.insert(s, 'Kv1')
+  g.insert(s, 'HCN1')
+```
+
+Finally for those of you that have really crazy preferences you can even
+nest contexts, where the innermost preferences take priority.
+
+## Script scope
+
+Use `glia.select` to select a preferred mechanism asset, similar to the
+single use syntax, for the remainder of the lifetime of the glia module:
+
+``` python
+section_global_Kv1 = h.Section()
+section_local_Kv1 = h.Section()
+g.insert(section_global_Kv1, 'Kv1') # Will use your global Kv1 mechanism
+g.select('Kv1', pkg='not_my_models', variant='high_activity')
+g.insert(section_local_Kv1, 'Kv1') # Will use the above selected Kv1 mechanism
+```
+
+## Global scope
+
+Applying global scope uses the Glia command-line tool and will configure
+glia to always select a mechanism asset as default.
+
+Go to your favorite command-line and enter:
+
+    glia select Kv1 --pkg=some_pkg_name --variant=non_default
+
+This will set your preference in any script you use.
