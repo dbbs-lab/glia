@@ -1,7 +1,7 @@
 import os, sys, pkg_resources, json, subprocess
 from shutil import copy2 as copy_file, rmtree as rmdir
 from functools import wraps
-from ._hash import get_directory_hash
+from ._hash import get_directory_hash, hash_path
 from .exceptions import *
 from .resolution import Resolver
 from .assets import Package, Mod
@@ -54,8 +54,18 @@ class Glia:
             self.packages.append(Package.from_remote(self, advert))
 
     @staticmethod
+    def get_glia_path():
+        from . import __path__
+
+        return __path__[0]
+
+    @staticmethod
+    def get_cache_hash():
+        return hash_path(Glia.get_glia_path())[:8]
+
+    @staticmethod
     def get_cache_path(*subfolders):
-        return os.path.join(_install_dirs.user_cache_dir, *subfolders)
+        return os.path.join(_install_dirs.user_cache_dir, Glia.get_cache_hash(), *subfolders)
 
     @staticmethod
     def get_data_path(*subfolders):
@@ -346,7 +356,6 @@ class Glia:
         return _installed
 
     def _install_self(self):
-        print("Please wait while Glia glues your neurons together...")
         try:
             os.makedirs(Glia.get_data_path())
         except FileExistsError:
@@ -359,7 +368,6 @@ class Glia:
             pass
         self.resolver = Resolver(self)
         self.compile()
-        print("Glia installed.")
 
     def get_mod_path(self, pkg):
         return os.path.abspath(os.path.join(pkg.path, "mod"))
@@ -367,19 +375,38 @@ class Glia:
     def get_neuron_mod_path(self):
         return Glia.get_cache_path()
 
+    def _read_shared_storage(self, *path):
+        _path = Glia.get_data_path(*path)
+        try:
+            with open(_path, "r") as f:
+                return json.load(f)
+        except IOError:
+            return {}
+
+    def _write_shared_storage(self, data, *path):
+        _path = Glia.get_data_path(*path)
+        with open(_path, "w") as f:
+            f.write(json.dumps(data))
+
     def read_storage(self, *path):
-        with open(Glia.get_data_path(*path)) as f:
-            return json.load(f)
+        data = self._read_shared_storage(*path)
+        glia_path = Glia.get_glia_path()
+        if glia_path not in data:
+            return {}
+        return data[glia_path]
 
     def write_storage(self, data, *path):
-        with open(Glia.get_data_path(*path), "w") as f:
-            json.dump(data, f)
+        _path = Glia.get_data_path(*path)
+        glia_path = Glia.get_glia_path()
+        shared_data = self._read_shared_storage(*path)
+        shared_data[glia_path] = data
+        self._write_shared_storage(shared_data, *path)
 
     def read_cache(self):
-        try:
-            return self.read_storage("cache.json")
-        except FileNotFoundError as _:
-            self.create_cache()
+        cache = self.read_storage("cache.json")
+        if "mod_hashes" not in cache:
+            cache["mod_hashes"] = {}
+        return cache
 
     def write_cache(self, cache_data):
         self.write_storage(cache_data, "cache.json")
@@ -402,6 +429,7 @@ class Glia:
     def create_preferences(self):
         self.write_storage({}, "preferences.json")
 
+    @_requires_install
     def list_assets(self):
         print(
             "Assets:",
