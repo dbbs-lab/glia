@@ -60,6 +60,13 @@ def compile():
     return _manager.compile()
 
 
+def load_library():
+    """
+        Load the glia library (if it isn't loaded yet).
+    """
+    return _manager.load_library()
+
+
 def context(assets=None, pkg=None, variant=None):
     """
         Creates a context that sets glia preferences during a `with` statement.
