@@ -14,14 +14,6 @@ glia.assets module
    :undoc-members:
    :show-inheritance:
 
-glia.glia module
-----------------
-
-.. automodule:: glia.glia
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 glia.resolution module
 ----------------------
 

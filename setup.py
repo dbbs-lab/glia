@@ -6,9 +6,19 @@ with open("README.md", "r") as fh:
 # Get the version from the glia module without importing it.
 with open(os.path.join(os.path.dirname(__file__), "glia", "__init__.py"), "r") as f:
     for line in f:
-        if line.startswith("__version__"):
+        if "__version__ = " in line:
             exec(line)
             break
+
+deps = [
+    "setuptools",
+    "requests",
+    "packaging>=19.0",
+    "appdirs",
+]
+if not os.getenv("READTHEDOCS"):
+    deps.append("nrn-patch>=2.0.1")
+
 
 setuptools.setup(
     name="nrn-glia",
@@ -25,7 +35,7 @@ setuptools.setup(
         "Programming Language :: Python :: 3",
         "Operating System :: OS Independent",
     ],
-    entry_points={"console_scripts": ["glia = glia.cli:glia_cli"]},
-    install_requires=["setuptools", "nrn-patch>=1.0.2", "requests", "packaging>=19.0"],
+    entry_points={"console_scripts": ["glia = glia._cli:glia_cli"]},
+    install_requires=deps,
     extras_require={"dev": ["sphinx", "pre-commit"]},
 )

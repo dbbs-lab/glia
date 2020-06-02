@@ -1,12 +1,5 @@
 import os, sys, argparse
-
-glia_pkg = __package__
-if glia_pkg is None:
-    sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-    import glia
-else:
-    import glia
-
+from . import _manager
 from .exceptions import *
 
 
@@ -82,25 +75,45 @@ def glia_cli():
 
 
 def install_package(args):
-    glia.manager.install(args.command)
-    glia.manager.start()
+    _manager.install(args.command)
+    _manager._compile()
 
 
 def compile(args):
-    if not hasattr(glia.manager, "_compiled") or not glia.manager._compiled:
-        glia.manager.compile()
+    print("Glia is compiling...")
+    _manager._compile()
+    print("Compilation complete!")
+    assets, _, _ = _manager._collect_asset_state()
+    print(
+        "Compiled assets:",
+        ", ".join(
+            list(
+                set(
+                    map(
+                        lambda a: a[0].name
+                        + "."
+                        + a[1].asset_name
+                        + "({})".format(a[1].variant),
+                        assets,
+                    )
+                )
+            )
+        ),
+    )
+    print("Testing assets ...")
+    test(*_manager.resolver.index.keys())
 
 
 def test(*args, verbose=False):
     if len(args) == 0:
-        args = glia.manager.resolver.index.keys()
+        args = _manager.resolver.index.keys()
     successes = 0
     tests = len(args)
     for mechanism in args:
         mstr = "[OK]"
         estr = ""
         try:
-            glia.manager.test_mechanism(mechanism)
+            _manager.test_mechanism(mechanism)
             successes += 1
         except LibraryError as e:
             mstr = "[ERROR]"
@@ -120,11 +133,11 @@ def test(*args, verbose=False):
 
 
 def list_assets(args):
-    glia.manager.list_assets()
+    _manager.list_assets()
 
 
 def select(asset, pkg=None, variant=None, glbl=False):
-    glia.manager.select(asset, pkg=pkg, variant=variant, glbl=glbl)
+    _manager.select(asset, pkg=pkg, variant=variant, glbl=glbl)
 
 
 ## Prints
@@ -142,8 +155,8 @@ class _colors:
 
 
 def _show_asset(asset):
-    index = glia.manager.resolver.index
-    preferences = glia.manager.resolver._preferences()
+    index = _manager.resolver.index
+    preferences = _manager.resolver._preferences()
     if not asset in index:
         print('Unknown asset "{}"'.format(asset))
         return
@@ -151,7 +164,7 @@ def _show_asset(asset):
         preference = preferences[asset]
         pref_mod = None
         try:
-            pref_mod = glia.manager.resolver.resolve_preference(asset)
+            pref_mod = _manager.resolver.resolve_preference(asset)
         except ResolveError as _:
             print("resolve error", _)
             pass
@@ -163,14 +176,12 @@ def _show_asset(asset):
         print("Current preferences: ", pref_string)
         print("Current preferred module:", pref_mod.mod_name)
     print("Available modules:")
-    for mod in glia.manager.resolver.index[asset]:
+    for mod in _manager.resolver.index[asset]:
         print("  *", mod.mod_name)
 
 
 def _show_pkg(pkg_name):
-    candidates = list(
-        filter(lambda p: p.name.find(pkg_name) != -1, glia.manager.packages)
-    )
+    candidates = list(filter(lambda p: p.name.find(pkg_name) != -1, _manager.packages))
     if not len(candidates):
         print("Package not found")
         return
@@ -188,8 +199,3 @@ def _show_pkg(pkg_name):
         for mod in candidate.mods:
             print("  *", mod.mod_name)
         print()
-
-
-if __name__ == "__main__":
-    print("Careful! Executing cli.py is unsupported.")
-    glia_cli()

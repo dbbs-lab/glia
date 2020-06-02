@@ -5,7 +5,20 @@
 
 # Glia: NEURON package manager
 
-Package manager for NEURON.
+Glia is an asset manager for NEURON. It collects mod files from
+different pip packages and compiles them into a central library that is
+automatically loaded into NEURON. This removes the need for compiling
+folder after folder with cluttered, duplicated mod files and allows you
+to focus on using these mechanisms across multiple models.
+
+Packaging your mod files as a Glia package allows you to distribute them
+as dependencies of your Python models and delegates the installation,
+distribution, versioning and archiving of your assets to Python's packet
+manager pip.
+
+To create Glia packages, check out the CLI tool
+[Astrocyte](https://astrocyte.readthedocs.io/en/latest/). Astrocyte also
+allows you to organize your personal mod collection\!
 
 # Usage
 
@@ -13,26 +26,25 @@ Glia can be installed from pip:
 
     pip install nrn-glia
 
-When Glia is imported it will check for glia packages and compile them
-into a library for NEURON, afterwards immediatly loading it into NEURON
-aswell:
+Glia will check whether packages have been added, changed or removed and
+will recompile and load the library if necessary. This means that except
+for importing Glia there's not much you need to do\!
 
 ``` python
 from neuron import h
 import glia as g
-```
 
-Only assets following the Glia naming convention will be included in the
-library and are available either directly using their namespaced name,
-or using `glia.insert`:
-
-``` python
 section = h.Section(name="soma")
-# Add the default Kv1 mechanism provided in the `example` package.
-section.insert("glia__example__Kv1__0")
-# Preferably use glia's mechanism resolver to load your favourite Kv1 mechanism.
+# Load your favourite Kv1 mechanism.
 g.insert(section, "Kv1")
+
+# Note: to load the library at import time you can import glia.library instead
+import glia.library
 ```
+
+Glia avoids conflicts between authors and even variants of the same
+mechanism and allows you to select sensible default preferences on many
+levels: globally, per script, per context or per function call.
 
 # Asset management
 
@@ -82,13 +94,26 @@ preferably use the given package or variant:
 ``` python
 from patch import p
 s = p.Section()
-with g.context(pkg=not_my_models):
+with g.context(pkg='not_my_models'):
   g.insert(s, 'Kv1')
   g.insert(s, 'Kv1', variant='high_activity')
 ```
 
-You can also specify a dictionary of asset-specific preferences during
-the with statement:
+You can also specify a dictionary multiple asset-specific preferences:
+
+``` python
+from patch import p
+s = p.Section()
+with g.context(assets={
+   'Kv1': {'package': 'not_my_models', 'variant': 'high_activity'},
+   'HCN1': {'variant': 'revised'}
+}):
+  g.insert(s, 'Kv1')
+  g.insert(s, 'HCN1')
+```
+
+And you can even combine, preferring a certain package unless the
+dictionary specifies otherwise:
 
 ``` python
 from patch import p
@@ -101,10 +126,13 @@ with g.context(assets={
   g.insert(s, 'HCN1')
 ```
 
+Finally for those of you that have really crazy preferences you can even
+nest contexts, where the innermost preferences take priority.
+
 ## Script scope
 
 Use `glia.select` to select a preferred mechanism asset, similar to the
-single use syntax:
+single use syntax, for the remainder of the lifetime of the glia module:
 
 ``` python
 section_global_Kv1 = h.Section()
@@ -119,31 +147,8 @@ g.insert(section_local_Kv1, 'Kv1') # Will use the above selected Kv1 mechanism
 Applying global scope uses the Glia command-line tool and will configure
 glia to always select a mechanism asset as default.
 
-Go to your favorite command-line tool and execute:
+Go to your favorite command-line and enter:
 
     glia select Kv1 --pkg=some_pkg_name --variant=non_default
 
-This will set your preference in any script you use, provided they load
-glia from the same path (e.g. not the case in different virtual
-environments).
-
-# Environment variables
-
-## GLIA\_NO\_INSTALL
-
-Set this to be able to import the glia module without it installing
-itself.
-
-## GLIA\_NO\_AUTOLOAD\_DLL
-
-Set this to stop Glia from automatically loading its compiled content
-into NEURON.
-
-## GLIA\_PATH
-
-Glia sets this to the path where Glia is executed from.
-
-## GLIA\_NRN\_AVAILABLE
-
-Glia sets this to 1 if it can import the neuron Python bindings, or 0
-otherwise.
+This will set your preference in any script you use.

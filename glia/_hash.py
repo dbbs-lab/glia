@@ -27,3 +27,6 @@ def hash_update_from_dir(directory, hash):
 
 def get_directory_hash(directory):
     return hash_update_from_dir(directory, hashlib.md5()).hexdigest()
+
+def hash_path(path):
+    return hashlib.md5(path.encode()).hexdigest()

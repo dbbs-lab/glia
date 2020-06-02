@@ -22,7 +22,6 @@ Welcome to Glia Packet Manager's documentation!
 
    self
    usage
-   env
    modules
 
 
