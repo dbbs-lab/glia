@@ -1,5 +1,16 @@
 # Version 0
 
+## 0.3.1
+
+* Fixed windows compilation process
+* Context & select require install so that the resolver is guaranteed to be present.
+
+## 0.3
+
+* Added stable importing of the root module
+* The library is only loaded once it is required, once `glia.library` is imported or once
+  `glia.load_library` is called
+
 ## 0.2.0
 
 * Added contextual preferences and general preferences.
