@@ -65,7 +65,9 @@ class Glia:
 
     @staticmethod
     def get_cache_path(*subfolders):
-        return os.path.join(_install_dirs.user_cache_dir, Glia.get_cache_hash(), *subfolders)
+        return os.path.join(
+            _install_dirs.user_cache_dir, Glia.get_cache_hash(), *subfolders
+        )
 
     @staticmethod
     def get_data_path(*subfolders):
@@ -131,13 +133,8 @@ class Glia:
         nrn_path = p.neuronhome()
         current_dir = os.getcwd()
         os.chdir(neuron_mod_path)
-        cyg_path = nrn_path.replace(":\\", "\\").replace("\\", "/")
         process = subprocess.Popen(
-            [
-                os.path.join(nrn_path, "mingw/usr/bin/sh"),
-                os.path.join(nrn_path, "lib/mknrndll.sh"),
-                os.path.join("/cygdrive/", cyg_path),
-            ],
+            [os.path.join(nrn_path, "nrnivmodl")],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -284,6 +281,7 @@ class Glia:
                         "'{}' mechanism not found".format(mod_name)
                     ) from None
 
+    @_requires_install
     def select(self, asset_name, glbl=False, pkg=None, variant=None):
         """
             Set script or global scope preferences for an asset.
@@ -301,6 +299,7 @@ class Glia:
             asset_name, glbl=glbl, pkg=pkg, variant=variant
         )
 
+    @_requires_install
     def context(self, assets=None, pkg=None, variant=None):
         return self.resolver.preference_context(assets=assets, pkg=pkg, variant=variant)
 
