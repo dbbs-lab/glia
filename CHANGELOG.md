@@ -1,5 +1,9 @@
 # Version 0
 
+## 0.3.4
+
+* Finishing up resolve & wincompile issues
+
 ## 0.3.3
 
 * `glia.resolve` added missing `self`.
