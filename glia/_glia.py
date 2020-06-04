@@ -303,6 +303,21 @@ class Glia:
     def context(self, assets=None, pkg=None, variant=None):
         return self.resolver.preference_context(assets=assets, pkg=pkg, variant=variant)
 
+    @_requires_install
+    def resolve(*args, **kwargs):
+        """
+            Resolve the given specifications applying all preferences and return the
+            full name as it is known in the library to NEURON.
+
+            :param asset_name: Short name of the asset
+            :type asset_name: str
+            :param pkg: Package specification for the asset
+            :type pkg: str
+            :param variant: Variant specification for the asset
+            :type variant: str
+        """
+        return self.resolver.resolve(*args, **kwargs)
+
     def _load_neuron_dll(self):
         if not os.path.exists(self.get_library()):
             return
