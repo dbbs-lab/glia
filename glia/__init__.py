@@ -1,6 +1,6 @@
 import os, sys
 
-__version__ = "0.3.1"
+__version__ = "0.3.4"
 
 if os.getenv("GLIA_NRN_PATH"):
     sys.path.insert(0, os.getenv("GLIA_NRN_PATH"))
@@ -36,7 +36,8 @@ def insert(section, asset, attributes=None, pkg=None, variant=None, x=0.5):
 
 
 def resolve(asset, pkg=None, variant=None):
-    return _manager.resolver.resolve(asset, pkg=pkg, variant=variant)
+
+    return _manager.resolve(asset, pkg=pkg, variant=variant)
 
 
 def select(asset, pkg=None, variant=None):
