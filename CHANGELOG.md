@@ -1,5 +1,9 @@
 # Version 0
 
+## 0.3.3
+
+* `glia.resolve` added missing `self`.
+
 ## 0.3.2
 
 * `glia.resolve` now checks installation and provides Resolver before trying to resolve.

@@ -134,7 +134,7 @@ class Glia:
         current_dir = os.getcwd()
         os.chdir(neuron_mod_path)
         process = subprocess.Popen(
-            [os.path.join(nrn_path, "nrnivmodl")],
+            [os.path.join(nrn_path, "bin", "nrnivmodl.bat")],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -303,8 +303,8 @@ class Glia:
     def context(self, assets=None, pkg=None, variant=None):
         return self.resolver.preference_context(assets=assets, pkg=pkg, variant=variant)
 
-    @_requires_install
-    def resolve(*args, **kwargs):
+    @_requires_library
+    def resolve(self, *args, **kwargs):
         """
             Resolve the given specifications applying all preferences and return the
             full name as it is known in the library to NEURON.
