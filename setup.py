@@ -17,7 +17,7 @@ deps = [
     "appdirs",
 ]
 if not os.getenv("READTHEDOCS"):
-    deps.append("nrn-patch>=2.0.1")
+    deps.append("nrn-patch>=2.0.4")
 
 
 setuptools.setup(
