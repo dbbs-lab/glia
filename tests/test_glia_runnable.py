@@ -52,3 +52,22 @@ class TestPackageDiscovery(unittest.TestCase):
 
         # TODO: Test point process insertion
         # TODO: Test point process attribute setting
+
+    def test_builtins(self):
+        import glia
+        from patch import p
+
+        s = p.Section()
+        glia.insert(s, "pas")
+        nrn_pkg = None
+        for pkg in glia._manager.packages:
+            if pkg.name == "NEURON":
+                nrn_pkg = pkg
+                break
+        else:
+            self.fail("NEURON builtin package not found.")
+        self.assertEqual(
+            [m.asset_name for m in pkg.mods],
+            ["extracellular", "fastpas", "hh", "k_ion", "na_ion", "pas"],
+            "NEURON builtins incorrect",
+        )

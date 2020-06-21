@@ -50,7 +50,13 @@ class Package:
 
 class Mod:
     def __init__(
-        self, pkg, name, variant, is_point_process=False, is_artificial_cell=False
+        self,
+        pkg,
+        name,
+        variant,
+        is_point_process=False,
+        is_artificial_cell=False,
+        builtin=False,
     ):
         self.pkg = pkg
         self.pkg_name = pkg.name
@@ -58,6 +64,7 @@ class Mod:
         self.asset_name = name
         self.variant = variant
         self.is_point_process = is_point_process
+        self.builtin = builtin
 
     @classmethod
     def from_remote(cls, package, remote_object):
@@ -99,6 +106,8 @@ class Mod:
 
     @property
     def mod_name(self):
+        if self.builtin:
+            return self.asset_name
         return "{}__{}__{}".format(self.namespace, self.asset_name, self.variant)
 
     @property

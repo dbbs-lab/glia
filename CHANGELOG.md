@@ -1,5 +1,9 @@
 # Version 0
 
+## 0.3.5
+
+* Glia now detects the builtin NEURON mechanisms.
+
 ## 0.3.4
 
 * Finishing up resolve & wincompile issues

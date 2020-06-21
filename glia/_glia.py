@@ -84,6 +84,7 @@ class Glia:
         if not self._compiled:
             self.compile(check_cache=True)
         if not self._loaded:
+            self._add_neuron_pkg()
             self._load_neuron_dll()
 
     @_requires_install
@@ -382,6 +383,29 @@ class Glia:
             pass
         self.resolver = Resolver(self)
         self.compile()
+
+    def _add_neuron_pkg(self):
+        import neuron
+        from neuron import h
+
+        nrn_pkg = Package("NEURON", neuron.__path__)
+        builtin_mechs = []
+        # Get all the builtin mechanisms
+        for k in dir(h):
+            try:
+                getattr(h, k)
+            except TypeError as e:
+                if "mechanism" in str(e):
+                    builtin_mechs.append(k)
+            except:
+                pass
+
+        for mech in builtin_mechs:
+            mod = Mod(nrn_pkg, mech, 0, builtin=True)
+            nrn_pkg.mods.append(mod)
+        self.packages.append(nrn_pkg)
+        if self.resolver:
+            self.resolver.construct_index()
 
     def get_mod_path(self, pkg):
         return os.path.abspath(os.path.join(pkg.path, "mod"))
