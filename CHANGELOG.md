@@ -1,5 +1,9 @@
 # Version 0
 
+## 0.3.6
+
+* Fixed builtin mech detection for NEURON 7.7+
+
 ## 0.3.5
 
 * Glia now detects the builtin NEURON mechanisms.

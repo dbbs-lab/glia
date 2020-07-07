@@ -1,6 +1,6 @@
 import os, sys
 
-__version__ = "0.3.5"
+__version__ = "0.3.6"
 
 if os.getenv("GLIA_NRN_PATH"):
     sys.path.insert(0, os.getenv("GLIA_NRN_PATH"))

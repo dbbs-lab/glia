@@ -390,10 +390,13 @@ class Glia:
 
         nrn_pkg = Package("NEURON", neuron.__path__)
         builtin_mechs = []
-        # Get all the builtin mechanisms
+        # Get all the builtin mechanisms by triggering a TypeError (NEURON 7.7 or below)
+        # Or by it being a "DensityMechanism" (NEURON 7.8 or above)
         for k in dir(h):
             try:
-                getattr(h, k)
+                m = str(getattr(h, k))
+                if "neuron.DensityMechanism" in m:
+                    builtin_mechs.append(k)
             except TypeError as e:
                 if "mechanism" in str(e):
                     builtin_mechs.append(k)
