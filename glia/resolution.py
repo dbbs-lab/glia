@@ -67,18 +67,18 @@ class Resolver:
 
         # Try resolving with preference
         resolved = self.resolve_preference(asset_name, pkg=pkg, variant=variant)
-        if not resolved is None:
+        if resolved is not None:
             return resolved.mod_name
 
         # If there was no preference, or if the preference couldn't resolve, try resolving
         # without preference.
         resolved = self._get_resolved(asset_name, pkg, variant)
-        if len(resolved) == 0:
-            raise NoMatchesError("Selection could not be resolved.")
-        resolve_name = resolved[0].mod_name
-        if len(resolved) > 1:
-            return self._resolve_multi(resolved, asset_name, pkg, variant)
-        return resolve_name
+        if not resolved:
+            raise NoMatchesError("Selection could not be resolved.", pkg, variant)
+        elif len(resolved) > 1:
+            return self._resolve_multi(resolved, asset_name, pkg, variant).mod_name
+        else:
+            return resolved[0].mod_name
 
     def resolve_preference(self, asset_name, pkg=None, variant=None):
         # Combine global, script, context & local preferences to obtain package and variant.
@@ -161,21 +161,20 @@ class Resolver:
     def _resolve_multi(self, resolved, asset_name, pkg, variant):
         # If all candidates are from the same package, and 1 is the default variant
         # then return that default variant
-        if all(map(lambda m: m.pkg_name == resolved[0].pkg_name, resolved)) and any(
-            map(lambda m: m.variant == "0", resolved)
+        if all(m.pkg_name == resolved[0].pkg_name for m in resolved) and any(
+            m.variant == "0" for m in resolved
         ):
-            return list(filter(lambda m: m.variant == "0", resolved))[0].mod_name
-        criterium = asset_name
+            return next(m for m in resolved if m.variant == "0")
+        selection = asset_name
         if pkg:
-            criterium = pkg + "." + asset_name
+            selection = pkg + "." + asset_name
         if variant:
-            criterium += " ({})".format(variant)
+            selection += " ({})".format(variant)
         raise TooManyMatchesError(
-            "Selection could not be resolved, too many matches for '{}':\n  * ".format(
-                criterium
-            )
-            + "\n  * ".join(list(map(lambda r: r.mod_name, resolved)))
-            + "\n Try specifying a package or variant"
+            f"Selection could not be resolved, too many matches for {selection}:\n  * "
+            + "\n  * ".join(r.mod_name for r in resolved)
+            + "\n Try specifying a package or variant",
+            list(r.mod_name for r in resolved), asset_name, pkg, variant
         )
 
     def has_preference(self, asset_name):

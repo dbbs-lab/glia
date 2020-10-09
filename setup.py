@@ -15,6 +15,7 @@ deps = [
     "requests",
     "packaging>=19.0",
     "appdirs",
+    "errr",
 ]
 if not os.getenv("READTHEDOCS"):
     deps.append("nrn-patch>=2.0.4")

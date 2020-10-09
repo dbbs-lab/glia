@@ -1,50 +1,17 @@
-class GliaError(Exception):
-    pass
+from errr.tree import make_tree as _make_tree, exception as _e
 
-
-class CompileError(GliaError):
-    pass
-
-
-class LibraryError(GliaError):
-    pass
-
-
-class NeuronError(GliaError):
-    pass
-
-
-class LookupError(GliaError):
-    pass
-
-
-class ResolveError(GliaError):
-    pass
-
-
-class TooManyMatchesError(ResolveError):
-    pass
-
-
-class NoMatchesError(ResolveError):
-    pass
-
-
-class UnknownAssetError(ResolveError):
-    pass
-
-
-class PackageError(GliaError):
-    pass
-
-
-class PackageModError(PackageError):
-    pass
-
-
-class PackageVersionError(PackageError):
-    pass
-
-
-class GliaApiError(GliaError):
-    pass
+_make_tree(globals(), GliaError=_e(
+    CompileError=_e(),
+    LibraryError=_e(),
+    NeuronError=_e(),
+    LookupError=_e(),
+    ResolveError=_e(
+        TooManyMatchesError=_e("matches", "asset", "pkg", "variant"),
+        NoMatchesError=_e("pkg", "variant"),
+        UnknownAssetError=_e(),
+    ),
+    PackageError=_e(
+        PackageModError=_e(),
+        PackageVersionError=_e(),
+    ),
+))
