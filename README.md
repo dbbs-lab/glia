@@ -99,7 +99,7 @@ with g.context(pkg='not_my_models'):
   g.insert(s, 'Kv1', variant='high_activity')
 ```
 
-You can also specify a dictionary multiple asset-specific preferences:
+You can also specify a dictionary with multiple asset-specific preferences:
 
 ``` python
 from patch import p
@@ -110,6 +110,8 @@ with g.context(assets={
 }):
   g.insert(s, 'Kv1')
   g.insert(s, 'HCN1')
+  # Not affected by the context:
+  g.insert(s, 'Kir2.3')
 ```
 
 And you can even combine, preferring a certain package unless the
