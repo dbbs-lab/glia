@@ -250,13 +250,8 @@ class Glia:
         mod = self.resolver.lookup(mod_name)
         if mod.is_point_process:  # Insert point process
             try:
-                # Get the point process factory from the hoc interpreter
-                point_process_factory = getattr(self.h, mod_name)
                 # Create a point process
-                point_process = self.h.PointProcess(point_process_factory, section(x))
-                for key, value in attributes.items():
-                    setattr(point_process, key, value)
-                return point_process
+                point_process = getattr(self.h, mod_name)(section(x))
             except AttributeError as e:
                 raise LibraryError(
                     "'{}' point process not found ".format(mod_name)
@@ -270,6 +265,9 @@ class Glia:
                             mod_name
                         )
                     ) from None
+            for key, value in attributes.items():
+                setattr(point_process, key, value)
+            return point_process
         else:  # Insert mechanism
             try:
                 r = section.insert(mod_name)

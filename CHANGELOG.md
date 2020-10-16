@@ -1,5 +1,9 @@
 # Version 0
 
+## 0.3.8
+
+* Switched to Patch 3 (beta)
+
 ## 0.3.7
 
 * Fixed `resolve_multi` returning str

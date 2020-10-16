@@ -18,7 +18,7 @@ deps = [
     "errr",
 ]
 if not os.getenv("READTHEDOCS"):
-    deps.append("nrn-patch>=2.0.4")
+    deps.append("nrn-patch>=3.0.0b0")
 
 
 setuptools.setup(
