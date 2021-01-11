@@ -1,5 +1,9 @@
 # Version 0
 
+## 0.3.9
+
+* Added "darwin" (Mac) compilation
+
 ## 0.3.8
 
 * Switched to Patch 3 (beta)

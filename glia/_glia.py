@@ -115,7 +115,7 @@ class Glia:
         # Platform specific compile
         if sys.platform == "win32":
             self._compile_windows(neuron_mod_path)
-        elif sys.platform == "linux":
+        elif sys.platform in ("linux", "darwin"):
             self._compile_linux(neuron_mod_path)
         else:
             raise NotImplementedError(
