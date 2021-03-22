@@ -104,25 +104,37 @@ class Glia:
         assets, mod_files, cache_data = self._collect_asset_state()
         if len(mod_files) == 0:
             return
-        # Walk over all files in the neuron mod path and remove them then copy over all
-        # `mod_files` that have to be compiled. Afterwards run a platform specific
-        # compile command.
-        neuron_mod_path = self.get_neuron_mod_path()
-        _remove_tree(neuron_mod_path)
-        # Copy over fresh mods
-        for file in mod_files:
-            copy_file(file, neuron_mod_path)
-        # Platform specific compile
-        if sys.platform == "win32":
-            self._compile_windows(neuron_mod_path)
-        elif sys.platform in ("linux", "darwin"):
-            self._compile_linux(neuron_mod_path)
-        else:
-            raise NotImplementedError(
-                "Only linux and win32 are supported. You are using " + sys.platform
-            )
+        for i in self._distribute_n(len(mod_files)):
+            self._compile_mod(assets[i], mod_files[i])
         # Update the cache with the new mod directory hashes.
         self.update_cache(cache_data)
+
+    def _compile_mod(self, asset, file):
+        mod_path = self.get_neuron_mod_path(asset[1].mod_name)
+        os.makedirs(mod_path, exist_ok=True)
+        # Clean out previous files inside of the mod path
+        _remove_tree(mod_path)
+        # Copy over the mod file
+        copy_file(file, mod_path)
+        # Platform specific compile
+        if sys.platform == "win32":
+            self._compile_windows(mod_path)
+        elif sys.platform in ("linux", "darwin"):
+            self._compile_linux(mod_path)
+        else:
+            raise NotImplementedError(
+                "Only linux, darwin and win32 are supported. You are using " + sys.platform
+            )
+
+    def _distribute_n(self, n):
+        try:
+            from mpi4py.MPI import COMM_WORLD
+        except ImportError:
+            return range(0, n)
+        else:
+            r = COMM_WORLD.Get_rank()
+            s = COMM_WORLD.Get_size()
+            return range(r, n, s)
 
     def _compile_windows(self, neuron_mod_path):
         # Compile the glia cache for Linux.
@@ -411,8 +423,8 @@ class Glia:
     def get_mod_path(self, pkg):
         return os.path.abspath(os.path.join(pkg.path, "mod"))
 
-    def get_neuron_mod_path(self):
-        return Glia.get_cache_path()
+    def get_neuron_mod_path(self, *paths):
+        return Glia.get_cache_path(*paths)
 
     def _read_shared_storage(self, *path):
         _path = Glia.get_data_path(*path)
