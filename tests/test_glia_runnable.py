@@ -39,7 +39,7 @@ class TestCompilation(unittest.TestCase):
         # Check that with `glia_test_mods` installed there are 3 mechanism folders
         self.assertEqual(len(glob(os.path.join(path, "*/"))), 3)
         # Check that all 3 libraries are picked up by `get_libraries`
-        self.assertEqual(len(glob(glia._manager.get_libraries())), 3)
+        self.assertEqual(len(glia._manager.get_libraries()), 3)
 
     def test_insert(self):
         from patch import p
@@ -64,6 +64,8 @@ class TestCompilation(unittest.TestCase):
         # TODO: Test point process insertion
         # TODO: Test point process attribute setting
 
+
+class TestBuiltins(unittest.TestCase):
     def test_builtins(self):
         import glia
         from patch import p
