@@ -188,6 +188,8 @@ class Glia:
         for pkg in self.packages:
             mod_path = self.get_mod_path(pkg)
             for mod in pkg.mods:
+                if mod.builtin:
+                    continue
                 assets.append((pkg, mod))
                 mod_file = mod.mod_path
                 mod_files.append(mod_file)
