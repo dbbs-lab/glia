@@ -2,7 +2,9 @@ import os
 from .exceptions import PackageError, PackageModError, PackageVersionError
 from packaging import version
 from ._glia import Glia
+from ._hash import get_directory_hash
 import subprocess
+import shutil
 from tempfile import TemporaryDirectory
 
 
@@ -123,20 +125,34 @@ class Mod:
 
 
 class Catalogue:
-    def __init__(self, name):
+    def __init__(self, name, source_file):
         self._name = name
-        self._path = Glia.get_cache_path(self._name, for_arbor=True)
+        self._source = os.path.dirname(source_file)
+        self._cache = Glia.get_cache_path(self._name, for_arbor=True)
+
+    @property
+    def name(self):
+        return self._name
+
+    @property
+    def source(self):
+        return self._source
 
     def load(self):
         import arbor
 
         if not self.is_fresh():
             self.build()
-        return arbor.load_catalogue(os.path.join(self._path, f"{self._name}.so"))
+        return arbor.load_catalogue(self._get_library_path())
+
+    def _get_library_path(self):
+        return os.path.join(self._cache, f"{self._name}-catalogue.so")
 
     def is_fresh(self):
+        if not os.path.exists(self._get_library_path()):
+            return False
         try:
-            cache_data = self.read_cache()
+            cache_data = Glia.read_cache()
             # Backward compatibility with old installs that
             # have a JSON file without cat_hashes in it.
             cache = cache_data.get("cat_hashes", dict()).get(self._name, None)
@@ -146,21 +162,39 @@ class Catalogue:
             return False
 
     def get_mod_path(self):
-        return os.path.abspath(os.path.join(self._path, "mod"))
+        return os.path.abspath(os.path.join(self._source, "mod"))
 
-    def build(self, verbose=True):
+    def build(self, verbose=False):
+        try:
+            from mpi4py.MPI import COMM_WORLD
+
+            mpi = True
+            if COMM_WORLD.Get_rank():
+                COMM_WORLD.Barrier()
+                return
+        except:
+            mpi = False
+
         mod_path = self.get_mod_path()
         with TemporaryDirectory() as tmp:
+            pwd = os.getcwd()
+            os.chdir(tmp)
             subprocess.run(
                 f"build-catalogue {self._name} {mod_path}"
+                + (" --quiet" if not verbose else "")
                 + (" --verbose" if verbose else ""),
                 shell=True,
                 check=True,
                 capture_output=not verbose,
             )
-            shutil.copy2(f"{self._name}-catalogue.so", self._path)
+            os.makedirs(self._cache, exist_ok=True)
+            shutil.copy2(f"{self._name}-catalogue.so", self._cache)
+            os.chdir(pwd)
         # Cache directory hash of current mod files so we only rebuild on source code changes.
-        cache_data = self.read_cache()
+        cache_data = Glia.read_cache()
         cat_hashes = cache_data.setdefault("cat_hashes", dict())
         cat_hashes[self._name] = get_directory_hash(mod_path)
-        self.update_cache(cache_data)
+        Glia.update_cache(cache_data)
+
+        if mpi:
+            COMM_WORLD.Barrier()

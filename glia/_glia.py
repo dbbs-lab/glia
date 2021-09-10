@@ -69,14 +69,20 @@ class Glia:
         for pkg_ptr in pkg_resources.iter_entry_points("glia.package"):
             advert = pkg_ptr.load()
             self.entry_points.append(advert)
-            self.packages.append(Package.from_remote(self, advert))
+            self._packages.append(Package.from_remote(self, advert))
 
     def discover_catalogues(self):
-        _replace_attr(self, "catalogues", [])
+        self._catalogues = {}
         for pkg_ptr in pkg_resources.iter_entry_points("glia.catalogue"):
             advert = pkg_ptr.load()
             self.entry_points.append(advert)
-            self.catalogues.append(advert)
+            if advert.name in self._catalogues:
+                raise RuntimeError(
+                    f"Duplicate installations of `{advert.name}` catalogue:"
+                    + f"\n{self._catalogues[advert.name].path}"
+                    + f"\n{advert.path}"
+                )
+            self._catalogues[advert.name] = advert
 
     def catalogue(self, name):
         import arbor
