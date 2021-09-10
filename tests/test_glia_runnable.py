@@ -19,16 +19,22 @@ class TestPackageDiscovery(unittest.TestCase):
         cache = glia._manager.read_cache()
         # Check whether the directory hash for `glia_test_mods` is present.
         self.assertTrue(
-            any(
-                [hash.find("glia_test_mods") != -1 for hash in cache["mod_hashes"].keys()]
-            )
+            any(["glia_test_mods" in hash for hash in cache["mod_hashes"].keys()])
         )
 
-    def test_compilation(self):
+
+class TestCompilation(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
         import glia
-        from glob import glob
 
         glia.compile()
+
+    def test_compilation(self):
+        from glob import glob
+        import glia
+
         path = glia._manager.get_neuron_mod_path()
         # Check that with `glia_test_mods` installed there are 3 mechanism folders
         self.assertEqual(len(glob(os.path.join(path, "*/"))), 3)

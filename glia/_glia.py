@@ -403,7 +403,7 @@ class Glia:
         import neuron
         from neuron import h
 
-        nrn_pkg = Package("NEURON", neuron.__path__)
+        nrn_pkg = Package("NEURON", neuron.__path__[0])
         builtin_mechs = []
         # Get all the builtin mechanisms by triggering a TypeError (NEURON 7.7 or below)
         # Or by it being a "DensityMechanism" (NEURON 7.8 or above)

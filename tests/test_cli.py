@@ -22,17 +22,11 @@ def run_cli_command(command):
 
 class TestCLI(unittest.TestCase):
     """
-        Check if packages can be discovered.
+    Check if packages can be discovered.
     """
 
     def test_basics(self):
         self.assertRaises(argparse.ArgumentError, run_cli_command, "doesntexist")
-
-    def test_compile(self):
-        run_cli_command("compile")
-
-    def test_pkg_install(self):
-        run_cli_command("install bababa")
 
     def test_pkg_install(self):
         run_cli_command("list")
