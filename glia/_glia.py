@@ -186,16 +186,15 @@ class Glia:
         assets = []
         # Iterate over all discovered packages to collect the mod files.
         for pkg in self.packages:
+            if pkg.builtin:
+                continue
             mod_path = self.get_mod_path(pkg)
             for mod in pkg.mods:
-                if mod.builtin:
-                    continue
                 assets.append((pkg, mod))
                 mod_file = mod.mod_path
                 mod_files.append(mod_file)
-            if not pkg.builtin:
-                # Hash mod directories and their contents to update the cache data.
-                cache_data["mod_hashes"][pkg.path] = get_directory_hash(mod_path)
+            # Hash mod directories and their contents to update the cache data.
+            cache_data["mod_hashes"][pkg.path] = get_directory_hash(mod_path)
         return assets, mod_files, cache_data
 
     def install(self, command):
