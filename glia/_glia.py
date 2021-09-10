@@ -7,6 +7,7 @@ from .resolution import Resolver
 from .assets import Package, Mod
 import requests
 import appdirs
+from glob import glob
 
 _install_dirs = appdirs.AppDirs(appname="Glia", appauthor="DBBS")
 _installed = None
@@ -85,7 +86,7 @@ class Glia:
             self.compile(check_cache=True)
         if not self._loaded:
             self._add_neuron_pkg()
-            self._load_neuron_dll()
+            self._load_all_libraries()
 
     @_requires_install
     def compile(self, check_cache=False):
@@ -105,11 +106,11 @@ class Glia:
         if len(mod_files) == 0:
             return
         for i in self._distribute_n(len(mod_files)):
-            self._compile_mod(assets[i], mod_files[i])
+            self._compile_nrn_mod(assets[i], mod_files[i])
         # Update the cache with the new mod directory hashes.
         self.update_cache(cache_data)
 
-    def _compile_mod(self, asset, file):
+    def _compile_nrn_mod(self, asset, file):
         mod_path = self.get_neuron_mod_path(asset[1].mod_name)
         os.makedirs(mod_path, exist_ok=True)
         # Clean out previous files inside of the mod path
@@ -118,9 +119,9 @@ class Glia:
         copy_file(file, mod_path)
         # Platform specific compile
         if sys.platform == "win32":
-            self._compile_windows(mod_path)
+            self._compile_nrn_windows(mod_path)
         elif sys.platform in ("linux", "darwin"):
-            self._compile_linux(mod_path)
+            self._compile_nrn_linux(mod_path)
         else:
             raise NotImplementedError(
                 "Only linux, darwin and win32 are supported. You are using " + sys.platform
@@ -136,7 +137,7 @@ class Glia:
             s = COMM_WORLD.Get_size()
             return range(r, n, s)
 
-    def _compile_windows(self, neuron_mod_path):
+    def _compile_nrn_windows(self, neuron_mod_path):
         # Compile the glia cache for Linux.
         # Swap the python process's current working directory to the glia mod directory
         # and run mknrndll.sh in mingw. This approach works even when the PATH isn't set
@@ -159,7 +160,7 @@ class Glia:
         if process.returncode != 0:
             raise CompileError(stderr.decode("UTF-8"))
 
-    def _compile_linux(self, neuron_mod_path):
+    def _compile_nrn_linux(self, neuron_mod_path):
         # Compile the glia cache for Linux.
         # Swap the python process's current working directory to the glia mod directory
         # and run nrnivmodl.
@@ -329,33 +330,28 @@ class Glia:
         """
         return self.resolver.resolve(*args, **kwargs)
 
-    def _load_neuron_dll(self):
-        if not os.path.exists(self.get_library()):
-            return
-        elif not self._loaded:
+    def _load_all_libraries(self):
+        if not self._loaded:
             from patch import p
 
             self.h = p
-            self._dll_result = self.h.nrn_load_dll(self.get_library())
-            self._loaded = self._dll_result == 1.0
-            if not self._loaded:
-                raise NeuronError("Library could not be loaded into NEURON.")
-        else:
-            # If NEURON is asked to load a library that contains names that are imported
-            # already it exits very ungracefully, waiting for user input and then killing
-            # our process. See https://github.com/neuronsimulator/nrn/issues/570
-            pass
+            for path in self.get_libraries():
+                dll_result = self.h.nrn_load_dll(path)
+                self._loaded = dll_result == 1.0 or self._loaded
+                if not self._loaded:
+                    raise NeuronError(f"Library file could not be loaded into NEURON. Path: '{path}'")
 
-    def get_library(self):
+    def get_libraries(self):
         """
-            Return the location of the library (dll/so) to be loaded into NEURON. Or
+            Return the locations of the library paths (dll/so) to be loaded into NEURON. Or
             perhaps for use in dark neuroscientific rituals, who knows.
         """
         if sys.platform == "win32":
             path = ["nrnmech.dll"]
         else:
             path = ["x86_64", ".libs", "libnrnmech.so"]
-        return Glia.get_cache_path(*path)
+
+        return [os.path.join(folder, *path) for folder in glob(Glia.get_cache_path("*/"))]
 
     def is_cache_fresh(self):
         try:
