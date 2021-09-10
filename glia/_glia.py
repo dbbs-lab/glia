@@ -215,7 +215,7 @@ class Glia:
             raise CompileError(stderr.decode("UTF-8"))
 
     def _collect_asset_state(self):
-        cache_data = self.read_cache()
+        cache_data = Glia.read_cache()
         mod_files = []
         assets = []
         # Iterate over all discovered packages to collect the mod files.
@@ -400,7 +400,7 @@ class Glia:
 
     def is_cache_fresh(self):
         try:
-            cache_data = self.read_cache()
+            cache_data = Glia.read_cache()
             hashes = cache_data["mod_hashes"]
             for pkg in self.packages:
                 if pkg.path not in hashes:
@@ -426,8 +426,8 @@ class Glia:
             os.makedirs(Glia.get_data_path())
         except FileExistsError:
             pass
-        self.create_cache()
-        self.create_preferences()
+        Glia.create_cache()
+        Glia.create_preferences()
         try:
             os.makedirs(Glia.get_cache_path())
         except FileExistsError:
@@ -468,7 +468,8 @@ class Glia:
     def get_neuron_mod_path(self, *paths):
         return Glia.get_cache_path(*paths)
 
-    def _read_shared_storage(self, *path):
+    @staticmethod
+    def _read_shared_storage(*path):
         _path = Glia.get_data_path(*path)
         try:
             with open(_path, "r") as f:
@@ -476,51 +477,60 @@ class Glia:
         except IOError:
             return {}
 
-    def _write_shared_storage(self, data, *path):
+    def _write_shared_storage(data, *path):
         _path = Glia.get_data_path(*path)
         with open(_path, "w") as f:
             f.write(json.dumps(data))
 
-    def read_storage(self, *path):
-        data = self._read_shared_storage(*path)
+    @staticmethod
+    def read_storage(*path):
+        data = Glia._read_shared_storage(*path)
         glia_path = Glia.get_glia_path()
         if glia_path not in data:
             return {}
         return data[glia_path]
 
-    def write_storage(self, data, *path):
+    @staticmethod
+    def write_storage(data, *path):
         _path = Glia.get_data_path(*path)
         glia_path = Glia.get_glia_path()
-        shared_data = self._read_shared_storage(*path)
+        shared_data = Glia._read_shared_storage(*path)
         shared_data[glia_path] = data
-        self._write_shared_storage(shared_data, *path)
+        Glia._write_shared_storage(shared_data, *path)
 
-    def read_cache(self):
-        cache = self.read_storage("cache.json")
+    @staticmethod
+    def read_cache():
+        cache = Glia.read_storage("cache.json")
         if "mod_hashes" not in cache:
             cache["mod_hashes"] = {}
         return cache
 
-    def write_cache(self, cache_data):
-        self.write_storage(cache_data, "cache.json")
+    @staticmethod
+    def write_cache(cache_data):
+        Glia.write_storage(cache_data, "cache.json")
 
-    def update_cache(self, cache_data):
-        cache = self.read_cache()
+    @staticmethod
+    def update_cache(cache_data):
+        cache = Glia.read_cache()
         cache.update(cache_data)
-        self.write_cache(cache)
+        Glia.write_cache(cache)
 
-    def create_cache(self):
+    @staticmethod
+    def create_cache():
         empty_cache = {"mod_hashes": {}}
-        self.write_cache(empty_cache)
+        Glia.write_cache(empty_cache)
 
-    def read_preferences(self):
-        return self.read_storage("preferences.json")
+    @staticmethod
+    def read_preferences():
+        return Glia.read_storage("preferences.json")
 
-    def write_preferences(self, preferences):
-        self.write_storage(preferences, "preferences.json")
+    @staticmethod
+    def write_preferences(preferences):
+        Glia.write_storage(preferences, "preferences.json")
 
-    def create_preferences(self):
-        self.write_storage({}, "preferences.json")
+    @staticmethod
+    def create_preferences():
+        Glia.write_storage({}, "preferences.json")
 
     @_requires_install
     def list_assets(self):
