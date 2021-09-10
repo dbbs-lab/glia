@@ -341,10 +341,10 @@ class Glia:
 
     def _load_all_libraries(self):
         if not self._loaded:
-            self._loaded = True
             from patch import p
 
             self.h = p
+            self._loaded = True
             for path in self.get_libraries():
                 dll_result = self.h.nrn_load_dll(path)
                 if not dll_result:
