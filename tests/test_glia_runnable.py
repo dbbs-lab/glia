@@ -5,7 +5,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 class TestPackageDiscovery(unittest.TestCase):
     """
-        Check if packages can be discovered.
+    Check if packages can be discovered.
     """
 
     def test_discovery(self):
@@ -19,15 +19,20 @@ class TestPackageDiscovery(unittest.TestCase):
         cache = glia._manager.read_cache()
         # Check whether the directory hash for `glia_test_mods` is present.
         self.assertTrue(
-            any([h.find("glia_test_mods") != -1 for h in cache["mod_hashes"].keys()])
+            any(
+                [hash.find("glia_test_mods") != -1 for hash in cache["mod_hashes"].keys()]
+            )
         )
 
     def test_compilation(self):
         import glia
         from glob import glob
 
+        glia.compile()
         path = glia._manager.get_neuron_mod_path()
-        self.assertEqual(len(glob(os.path.join(path, "*.mod"))), 3)
+        # Check that with `glia_test_mods` installed there are 3 mechanism folders
+        self.assertEqual(len(glob(os.path.join(path, "*/"))), 3)
+        # Check that all 3 libraries are picked up by `get_libraries`
         self.assertEqual(len(glob(glia._manager.get_libraries())), 3)
 
     def test_insert(self):
