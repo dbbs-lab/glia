@@ -28,6 +28,9 @@ class TestCLI(unittest.TestCase):
     def test_basics(self):
         self.assertRaises(argparse.ArgumentError, run_cli_command, "doesntexist")
 
+    def test_compile(self):
+        run_cli_command("compile")
+
     def test_pkg_install(self):
         run_cli_command("list")
 
