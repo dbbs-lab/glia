@@ -2,6 +2,12 @@ import os, sys, argparse
 from . import _manager
 from .exceptions import *
 
+try:
+    import mpi4py.MPI
+    main_node = not mpi4py.MPI.COMM_WORLD.Get_rank()
+except ImportError:
+    main_node = True
+
 
 def glia_cli():
     parser = argparse.ArgumentParser()
@@ -80,27 +86,30 @@ def install_package(args):
 
 
 def compile(args):
-    print("Glia is compiling...")
+    if main_node:
+        print("Glia is compiling...")
     _manager._compile()
-    print("Compilation complete!")
+    if main_node:
+        print("Compilation complete!")
     assets, _, _ = _manager._collect_asset_state()
-    print(
-        "Compiled assets:",
-        ", ".join(
-            list(
-                set(
-                    map(
-                        lambda a: a[0].name
-                        + "."
-                        + a[1].asset_name
-                        + "({})".format(a[1].variant),
-                        assets,
+    if main_node:
+        print(
+            "Compiled assets:",
+            ", ".join(
+                list(
+                    set(
+                        map(
+                            lambda a: a[0].name
+                            + "."
+                            + a[1].asset_name
+                            + "({})".format(a[1].variant),
+                            assets,
+                        )
                     )
                 )
-            )
-        ),
-    )
-    print("Testing assets ...")
+            ),
+        )
+        print("Testing assets ...")
     test(*_manager.resolver.index.keys())
 
 
@@ -126,10 +135,13 @@ def test(*args, verbose=False):
         except LookupError as e:
             mstr = "[X]"
             estr = str(e)
-        print(mstr, mechanism)
+        if main_node:
+            print(mstr, mechanism)
         if verbose and estr != "":
-            print("  -- " + estr)
-    print("Tests finished:", successes, "out of", tests, "passed")
+            if main_node:
+                print("  -- " + estr)
+    if main_node:
+        print("Tests finished:", successes, "out of", tests, "passed")
 
 
 def list_assets(args):

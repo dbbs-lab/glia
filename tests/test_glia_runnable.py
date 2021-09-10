@@ -28,7 +28,7 @@ class TestPackageDiscovery(unittest.TestCase):
 
         path = glia._manager.get_neuron_mod_path()
         self.assertEqual(len(glob(os.path.join(path, "*.mod"))), 3)
-        self.assertEqual(len(glob(glia._manager.get_library())), 1)
+        self.assertEqual(len(glob(glia._manager.get_libraries())), 3)
 
     def test_insert(self):
         from patch import p
