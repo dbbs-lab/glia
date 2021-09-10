@@ -1,6 +1,9 @@
 import os
 from .exceptions import PackageError, PackageModError, PackageVersionError
 from packaging import version
+from ._glia import Glia
+import subprocess
+from tempfile import TemporaryDirectory
 
 
 class Package:
@@ -117,3 +120,47 @@ class Mod:
     @property
     def mod_path(self):
         return os.path.abspath(os.path.join(self.pkg.mod_path, self.mod_name + ".mod"))
+
+
+class Catalogue:
+    def __init__(self, name):
+        self._name = name
+        self._path = Glia.get_cache_path(self._name, for_arbor=True)
+
+    def load(self):
+        import arbor
+
+        if not self.is_fresh():
+            self.build()
+        return arbor.load_catalogue(os.path.join(self._path, f"{self._name}.so"))
+
+    def is_fresh(self):
+        try:
+            cache_data = self.read_cache()
+            # Backward compatibility with old installs that
+            # have a JSON file without cat_hashes in it.
+            cache = cache_data.get("cat_hashes", dict()).get(self._name, None)
+            hash = get_directory_hash(self.get_mod_path())
+            return cache == hash
+        except FileNotFoundError as _:
+            return False
+
+    def get_mod_path(self):
+        return os.path.abspath(os.path.join(self._path, "mod"))
+
+    def build(self, verbose=True):
+        mod_path = self.get_mod_path()
+        with TemporaryDirectory() as tmp:
+            subprocess.run(
+                f"build-catalogue {self._name} {mod_path}"
+                + (" --verbose" if verbose else ""),
+                shell=True,
+                check=True,
+                capture_output=not verbose,
+            )
+            shutil.copy2(f"{self._name}-catalogue.so", self._path)
+        # Cache directory hash of current mod files so we only rebuild on source code changes.
+        cache_data = self.read_cache()
+        cat_hashes = cache_data.setdefault("cat_hashes", dict())
+        cat_hashes[self._name] = get_directory_hash(mod_path)
+        self.update_cache(cache_data)

@@ -4,7 +4,6 @@ from functools import wraps
 from ._hash import get_directory_hash, hash_path
 from .exceptions import *
 from .resolution import Resolver
-from .assets import Package, Mod
 import requests
 import appdirs
 from glob import glob
@@ -41,18 +40,48 @@ class Glia:
         self._compiled = False
         self._loaded = False
         self.entry_points = []
-        self.discover_packages()
-        if self._is_installed():
-            self.resolver = Resolver(self)
-        else:
-            self.resolver = None
+        self._packages = None
+        self._catalogues = None
+        self._resolver = None
+
+    @property
+    def resolver(self):
+        if self._resolver is None and self._is_installed():
+            self._resolver = Resolver(self)
+        return self._resolver
+
+    @property
+    def packages(self):
+        if self._packages is None:
+            self.discover_packages()
+        return self._packages
+
+    @property
+    def catalogues(self):
+        if self._catalogues is None:
+            self.discover_catalogues()
+        return self._catalogues
 
     def discover_packages(self):
-        self.packages = []
+        from .assets import Package
+
+        self._packages = []
         for pkg_ptr in pkg_resources.iter_entry_points("glia.package"):
             advert = pkg_ptr.load()
             self.entry_points.append(advert)
             self.packages.append(Package.from_remote(self, advert))
+
+    def discover_catalogues(self):
+        _replace_attr(self, "catalogues", [])
+        for pkg_ptr in pkg_resources.iter_entry_points("glia.catalogue"):
+            advert = pkg_ptr.load()
+            self.entry_points.append(advert)
+            self.catalogues.append(advert)
+
+    def catalogue(self, name):
+        import arbor
+
+        return self.catalogues[name].load()
 
     @staticmethod
     def get_glia_path():
@@ -61,13 +90,18 @@ class Glia:
         return __path__[0]
 
     @staticmethod
-    def get_cache_hash():
-        return hash_path(Glia.get_glia_path())[:8]
+    def get_cache_hash(for_arbor=False):
+        cache_slug = hash_path(Glia.get_glia_path())[:8]
+        if for_arbor:
+            cache_slug = "arb_" + cache_slug
+        return cache_slug
 
     @staticmethod
-    def get_cache_path(*subfolders):
+    def get_cache_path(*subfolders, for_arbor=False):
         return os.path.join(
-            _install_dirs.user_cache_dir, Glia.get_cache_hash(), *subfolders
+            _install_dirs.user_cache_dir,
+            Glia.get_cache_hash(for_arbor=for_arbor),
+            *subfolders,
         )
 
     @staticmethod
@@ -404,6 +438,7 @@ class Glia:
     def _add_neuron_pkg(self):
         import neuron
         from neuron import h
+        from .assets import Package, Mod
 
         nrn_pkg = Package("NEURON", neuron.__path__[0], builtin=True)
         builtin_mechs = []
