@@ -4,7 +4,7 @@ on: [push]
 
 jobs:
   build:
-
+    name: build py${{ matrix.py }}, NEURON ${{ matrix.nrn }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
