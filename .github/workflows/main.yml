@@ -1,4 +1,4 @@
-name: Build and test BSB
+name: Build and test Glia
 
 on: [push]
 
