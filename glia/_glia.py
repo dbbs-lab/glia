@@ -432,7 +432,7 @@ class Glia:
             os.makedirs(Glia.get_cache_path())
         except FileExistsError:
             pass
-        self.resolver = Resolver(self)
+        self._resolver = Resolver(self)
         self.compile()
 
     def _add_neuron_pkg(self):
