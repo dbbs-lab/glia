@@ -191,8 +191,9 @@ class Glia:
                 assets.append((pkg, mod))
                 mod_file = mod.mod_path
                 mod_files.append(mod_file)
-            # Hash mod directories and their contents to update the cache data.
-            cache_data["mod_hashes"][pkg.path] = get_directory_hash(mod_path)
+            if not pkg.builtin:
+                # Hash mod directories and their contents to update the cache data.
+                cache_data["mod_hashes"][pkg.path] = get_directory_hash(mod_path)
         return assets, mod_files, cache_data
 
     def install(self, command):
@@ -403,7 +404,7 @@ class Glia:
         import neuron
         from neuron import h
 
-        nrn_pkg = Package("NEURON", neuron.__path__[0])
+        nrn_pkg = Package("NEURON", neuron.__path__[0], builtin=True)
         builtin_mechs = []
         # Get all the builtin mechanisms by triggering a TypeError (NEURON 7.7 or below)
         # Or by it being a "DensityMechanism" (NEURON 7.8 or above)
