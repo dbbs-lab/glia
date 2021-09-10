@@ -91,10 +91,10 @@ class Glia:
     @_requires_install
     def compile(self, check_cache=False):
         """
-            Compile and test all mod files found in all Glia packages.
+        Compile and test all mod files found in all Glia packages.
 
-            :param check_cache: If true, the cache is checked and compilation is only performed if it is stale.
-            :type check_cache: boolean
+        :param check_cache: If true, the cache is checked and compilation is only performed if it is stale.
+        :type check_cache: boolean
         """
         self._compiled = True
         if not check_cache or not self.is_cache_fresh():
@@ -124,7 +124,8 @@ class Glia:
             self._compile_nrn_linux(mod_path)
         else:
             raise NotImplementedError(
-                "Only linux, darwin and win32 are supported. You are using " + sys.platform
+                "Only linux, darwin and win32 are supported. You are using "
+                + sys.platform
             )
 
     def _distribute_n(self, n):
@@ -185,6 +186,8 @@ class Glia:
         assets = []
         # Iterate over all discovered packages to collect the mod files.
         for pkg in self.packages:
+            if pkg.builtin:
+                continue
             mod_path = self.get_mod_path(pkg)
             for mod in pkg.mods:
                 assets.append((pkg, mod))
@@ -196,33 +199,39 @@ class Glia:
 
     def install(self, command):
         """
-            Install a package from the Glia package index.
+        Install a package from the Glia package index.
 
-            :param command: Command string to be passed to pip install, including name of the package(s) to install.
-            :type command: string.
+        :param command: Command string to be passed to pip install, including name of the package(s) to install.
+        :type command: string.
         """
         subprocess.call(
-            [sys.executable, "-m", "pip", "install", command,]
+            [
+                sys.executable,
+                "-m",
+                "pip",
+                "install",
+                command,
+            ]
         )
 
     def uninstall(self, command):
         """
-            Uninstall a Glia package.
-            :param command: Command string to be passed to pip uninstall, including name of the package(s) to uninstall.
-            :type command: string.
+        Uninstall a Glia package.
+        :param command: Command string to be passed to pip uninstall, including name of the package(s) to uninstall.
+        :type command: string.
         """
         subprocess.call([sys.executable, "-m", "pip", "uninstall", command])
 
     @_requires_library
     def test_mechanism(self, mechanism):
         """
-            Try to insert a mechanism in a Section to test its available in NEURON.
+        Try to insert a mechanism in a Section to test its available in NEURON.
 
-            :param mechanism: Fully qualified NEURON name of the mechanism.
-            :type mechanism: string
-            :returns: True if the test succeeds
-            :rtype: boolean
-            :raises: LibraryError if the mechanism can't be inserted.
+        :param mechanism: Fully qualified NEURON name of the mechanism.
+        :type mechanism: string
+        :returns: True if the test succeeds
+        :rtype: boolean
+        :raises: LibraryError if the mechanism can't be inserted.
         """
         try:
             s = self.h.Section()
@@ -236,21 +245,21 @@ class Glia:
     @_requires_library
     def insert(self, section, asset, attributes=None, pkg=None, variant=None, x=0.5):
         """
-            Insert a mechanism or point process into a Section.
+        Insert a mechanism or point process into a Section.
 
-            :param section: The section to insert the asset into.
-            :type section: Section
-            :param asset: The name of the asset. Will be resolved into a fully qualified NEURON name based on preferences, unless a fully qualified name is given.
-            :type asset: string
-            :param attributes: Attributes of the asset to set on the section/mechanism.
-            :type attributes: dict
-            :param pkg: Package preference. Overrides global & script preferences.
-            :type pkg: string
-            :param variant: Variant preference. Overrides global & script preferences.
-            :type variant: string
-            :param x: Position along the `section` to place the point process at. Does not apply to mechanisms.
-            :type x: float
-            :raises: LibraryError if the asset isn't found or was incorrectly marked as a point process.
+        :param section: The section to insert the asset into.
+        :type section: Section
+        :param asset: The name of the asset. Will be resolved into a fully qualified NEURON name based on preferences, unless a fully qualified name is given.
+        :type asset: string
+        :param attributes: Attributes of the asset to set on the section/mechanism.
+        :type attributes: dict
+        :param pkg: Package preference. Overrides global & script preferences.
+        :type pkg: string
+        :param variant: Variant preference. Overrides global & script preferences.
+        :type variant: string
+        :param x: Position along the `section` to place the point process at. Does not apply to mechanisms.
+        :type x: float
+        :raises: LibraryError if the asset isn't found or was incorrectly marked as a point process.
         """
         # Transform the given section into a NEURON section.
         nrn_section = _transform(section)
@@ -296,16 +305,16 @@ class Glia:
     @_requires_install
     def select(self, asset_name, glbl=False, pkg=None, variant=None):
         """
-            Set script or global scope preferences for an asset.
+        Set script or global scope preferences for an asset.
 
-            :param asset_name: Unresolved asset name.
-            :type asset_name: string
-            :param glbl: Set global scope instead of script scope.
-            :type glbl: boolean
-            :param pkg: Name of the package to prefer.
-            :type pkg: string
-            :param variant: Name of the variant to prefer.
-            :type variant: string
+        :param asset_name: Unresolved asset name.
+        :type asset_name: string
+        :param glbl: Set global scope instead of script scope.
+        :type glbl: boolean
+        :param pkg: Name of the package to prefer.
+        :type pkg: string
+        :param variant: Name of the variant to prefer.
+        :type variant: string
         """
         return self.resolver.set_preference(
             asset_name, glbl=glbl, pkg=pkg, variant=variant
@@ -318,15 +327,15 @@ class Glia:
     @_requires_library
     def resolve(self, *args, **kwargs):
         """
-            Resolve the given specifications applying all preferences and return the
-            full name as it is known in the library to NEURON.
+        Resolve the given specifications applying all preferences and return the
+        full name as it is known in the library to NEURON.
 
-            :param asset_name: Short name of the asset
-            :type asset_name: str
-            :param pkg: Package specification for the asset
-            :type pkg: str
-            :param variant: Variant specification for the asset
-            :type variant: str
+        :param asset_name: Short name of the asset
+        :type asset_name: str
+        :param pkg: Package specification for the asset
+        :type pkg: str
+        :param variant: Variant specification for the asset
+        :type variant: str
         """
         return self.resolver.resolve(*args, **kwargs)
 
@@ -335,16 +344,18 @@ class Glia:
             from patch import p
 
             self.h = p
+            self._loaded = True
             for path in self.get_libraries():
                 dll_result = self.h.nrn_load_dll(path)
-                self._loaded = dll_result == 1.0 or self._loaded
-                if not self._loaded:
-                    raise NeuronError(f"Library file could not be loaded into NEURON. Path: '{path}'")
+                if not dll_result:
+                    raise NeuronError(
+                        f"Library file could not be loaded into NEURON. Path: '{path}'"
+                    )
 
     def get_libraries(self):
         """
-            Return the locations of the library paths (dll/so) to be loaded into NEURON. Or
-            perhaps for use in dark neuroscientific rituals, who knows.
+        Return the locations of the library paths (dll/so) to be loaded into NEURON. Or
+        perhaps for use in dark neuroscientific rituals, who knows.
         """
         if sys.platform == "win32":
             path = ["nrnmech.dll"]
@@ -394,7 +405,7 @@ class Glia:
         import neuron
         from neuron import h
 
-        nrn_pkg = Package("NEURON", neuron.__path__)
+        nrn_pkg = Package("NEURON", neuron.__path__[0], builtin=True)
         builtin_mechs = []
         # Get all the builtin mechanisms by triggering a TypeError (NEURON 7.7 or below)
         # Or by it being a "DensityMechanism" (NEURON 7.8 or above)

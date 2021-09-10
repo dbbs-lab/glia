@@ -4,10 +4,14 @@ from packaging import version
 
 
 class Package:
-    def __init__(self, name, path):
+    def __init__(self, name, path, builtin=False):
         self.name = name
         self.path = path
         self.mods = []
+        # Exceptional flag for the NEURON builtins.
+        # They need a definition to be `insert`ed,
+        # but have no mod files to be compiled.
+        self.builtin = builtin
 
     @classmethod
     def from_remote(cls, manager, advert):

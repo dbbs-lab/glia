@@ -14,21 +14,21 @@ _manager = Glia()
 
 def insert(section, asset, attributes=None, pkg=None, variant=None, x=0.5):
     """
-        Insert a mechanism or point process into a Section.
+    Insert a mechanism or point process into a Section.
 
-        :param section: The section to insert the asset into.
-        :type section: Section
-        :param asset: The name of the asset. Will be resolved into a fully qualified NEURON name based on preferences, unless a fully qualified name is given.
-        :type asset: string
-        :param attributes: Attributes of the asset to set on the section/mechanism.
-        :type attributes: dict
-        :param pkg: Package preference. Overrides global & script preferences.
-        :type pkg: string
-        :param variant: Variant preference. Overrides global & script preferences.
-        :type variant: string
-        :param x: Position along the `section` to place the point process at. Does not apply to mechanisms.
-        :type x: float
-        :raises: LibraryError if the asset isn't found or was incorrectly marked as a point process.
+    :param section: The section to insert the asset into.
+    :type section: Section
+    :param asset: The name of the asset. Will be resolved into a fully qualified NEURON name based on preferences, unless a fully qualified name is given.
+    :type asset: string
+    :param attributes: Attributes of the asset to set on the section/mechanism.
+    :type attributes: dict
+    :param pkg: Package preference. Overrides global & script preferences.
+    :type pkg: string
+    :param variant: Variant preference. Overrides global & script preferences.
+    :type variant: string
+    :param x: Position along the `section` to place the point process at. Does not apply to mechanisms.
+    :type x: float
+    :raises: LibraryError if the asset isn't found or was incorrectly marked as a point process.
     """
     return _manager.insert(
         section, asset, attributes=attributes, pkg=pkg, variant=variant, x=x
@@ -42,34 +42,34 @@ def resolve(asset, pkg=None, variant=None):
 
 def select(asset, pkg=None, variant=None):
     """
-        Set script scope preferences for an asset.
+    Set script scope preferences for an asset.
 
-        :param asset: Unresolved asset name.
-        :type asset: string
-        :param pkg: Name of the package to prefer.
-        :type pkg: string
-        :param variant: Name of the variant to prefer.
-        :type variant: string
+    :param asset: Unresolved asset name.
+    :type asset: string
+    :param pkg: Name of the package to prefer.
+    :type pkg: string
+    :param variant: Name of the variant to prefer.
+    :type variant: string
     """
     return _manager.select(asset, pkg=pkg, variant=variant)
 
 
 def compile():
     """
-        Compile and test all mod files found in all Glia packages.
+    Compile and test all mod files found in all Glia packages.
     """
     return _manager.compile()
 
 
 def load_library():
     """
-        Load the glia library (if it isn't loaded yet).
+    Load the glia library (if it isn't loaded yet).
     """
     return _manager.load_library()
 
 
 def context(assets=None, pkg=None, variant=None):
     """
-        Creates a context that sets glia preferences during a `with` statement.
+    Creates a context that sets glia preferences during a `with` statement.
     """
     return _manager.context(assets=assets, pkg=pkg, variant=variant)

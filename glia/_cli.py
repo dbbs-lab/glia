@@ -4,6 +4,7 @@ from .exceptions import *
 
 try:
     import mpi4py.MPI
+
     main_node = not mpi4py.MPI.COMM_WORLD.Get_rank()
 except ImportError:
     main_node = True
@@ -18,21 +19,8 @@ def glia_cli():
     )
     compile_parser.set_defaults(func=compile)
 
-    # Install self is a dud, but it does cause this module - glia - to be
-    # imported, and glia installs itself on first import.
-    install_self_parser = subparsers.add_parser(
-        "install-self", description="Install the glia package manager."
-    )
-    install_self_parser.set_defaults(func=lambda s: None)
-
-    install_parser = subparsers.add_parser(
-        "install", description="Install a glia package"
-    )
-    install_parser.add_argument("command", action="store", help="pip install command")
-    install_parser.set_defaults(func=install_package)
-
-    install_parser = subparsers.add_parser("list", description="List all glia assets.")
-    install_parser.set_defaults(func=list_assets)
+    list_parser = subparsers.add_parser("list", description="List all glia assets.")
+    list_parser.set_defaults(func=list_assets)
 
     select_parser = subparsers.add_parser(
         "select", description="Set global preferences for an asset."
@@ -75,14 +63,9 @@ def glia_cli():
     if hasattr(cl_args, "func"):
         try:
             cl_args.func(cl_args)
-        except GliaError as e:
+        except GliaError as e:  # pragma: no cover
             print("GLIA ERROR", str(e))
             sys.exit(1)
-
-
-def install_package(args):
-    _manager.install(args.command)
-    _manager._compile()
 
 
 def compile(args):
