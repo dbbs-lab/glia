@@ -15,6 +15,7 @@ def hash_file(filename):  # pragma: nocover
 
 
 def hash_update_from_dir(directory, hash):
+    print("HASHING DIR", directory)
     assert Path(directory).is_dir()
     for path in sorted(Path(directory).iterdir()):
         hash.update(path.name.encode())
