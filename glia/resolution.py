@@ -109,11 +109,11 @@ class Resolver:
 
     def _get_final_pv(self, asset_name, pkg, variant):
         """
-            Get final package and variant preference.
+        Get final package and variant preference.
 
-            This function fetches all preferences and checks whether there's specific
-            package or variant preferences. If not it checks the general package or
-            variant preferences not specific to the asset.
+        This function fetches all preferences and checks whether there's specific
+        package or variant preferences. If not it checks the general package or
+        variant preferences not specific to the asset.
         """
         # Fetch global, script & context preferences
         preferences = self._preferences()
@@ -174,7 +174,10 @@ class Resolver:
             f"Selection could not be resolved, too many matches for {selection}:\n  * "
             + "\n  * ".join(r.mod_name for r in resolved)
             + "\n Try specifying a package or variant",
-            list(r.mod_name for r in resolved), asset_name, pkg, variant
+            list(r.mod_name for r in resolved),
+            asset_name,
+            pkg,
+            variant,
         )
 
     def has_preference(self, asset_name):

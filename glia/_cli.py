@@ -4,6 +4,7 @@ from .exceptions import *
 
 try:
     import mpi4py.MPI
+
     main_node = not mpi4py.MPI.COMM_WORLD.Get_rank()
 except ImportError:
     main_node = True
