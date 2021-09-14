@@ -42,7 +42,6 @@ class Resolver:
         self.local_preferences = {}
         self.__preference_stack = {}
         self.__next_stack_id = 0
-        # self.index = self._manager.read_index()
         self.construct_index()
 
     def construct_index(self):

@@ -1,6 +1,6 @@
 import os, sys
 
-__version__ = "0.3.9"
+__version__ = "0.4"
 
 if os.getenv("GLIA_NRN_PATH"):
     sys.path.insert(0, os.getenv("GLIA_NRN_PATH"))
@@ -73,3 +73,13 @@ def context(assets=None, pkg=None, variant=None):
     Creates a context that sets glia preferences during a `with` statement.
     """
     return _manager.context(assets=assets, pkg=pkg, variant=variant)
+
+
+def catalogue(name):
+    """
+    Load or build an Arbor mechanism catalogue.
+
+    :param name: Name of the Glia installed Arbor catalogue.
+    :type name: str
+    """
+    return _manager.catalogue(name)
