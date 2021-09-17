@@ -36,7 +36,9 @@ def insert(section, asset, attributes=None, pkg=None, variant=None, x=0.5):
 
 
 def resolve(asset, pkg=None, variant=None):
-
+    """
+    Resolve an asset selection command to the name known to NEURON.
+    """
     return _manager.resolve(asset, pkg=pkg, variant=variant)
 
 
