@@ -194,8 +194,15 @@ class Catalogue:
                     capture_output=not verbose,
                 )
             except subprocess.CalledProcessError as e:
-                print("BUILD CATALOGUE ERROR", e.output)
-                raise e
+                msg_p = (
+                    f"build-catalogue errored out with exitcode {e.returncode}",
+                    "---- build-catalogue output ----",
+                    e.stdout.decode(),
+                    "---- build-catalogue error  ----",
+                    e.stderr.decode(),
+                )
+                msg = "\n\n".join(msg_p)
+                raise subprocess.CalledProcessError(msg) from None
             os.makedirs(self._cache, exist_ok=True)
             shutil.copy2(f"{self._name}-catalogue.so", self._cache)
             os.chdir(pwd)
