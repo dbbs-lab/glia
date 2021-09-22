@@ -167,26 +167,35 @@ class Catalogue:
     def build(self, verbose=False):
         try:
             from mpi4py.MPI import COMM_WORLD
-
-            mpi = True
-            if COMM_WORLD.Get_rank():
-                COMM_WORLD.Barrier()
-                return
         except:
-            mpi = False
+            # No mpi4py, assume no MPI, build local on all (hopefully 1) nodes
+            self._build_local(verbose=verbose)
+        else:
+            # mpi4pt detected, build local on node 0. All nodes wait for build
+            # to complete with a Barrier.
+            try:
+                if not COMM_WORLD.Get_rank():
+                    self._build_local(verbose=verbose)
+            finally:
+                COMM_WORLD.Barrier()
 
+    def _build_local(self, verbose=False):
         mod_path = self.get_mod_path()
         with TemporaryDirectory() as tmp:
             pwd = os.getcwd()
             os.chdir(tmp)
-            subprocess.run(
-                f"build-catalogue {self._name} {mod_path}"
-                + (" --quiet" if not verbose else "")
-                + (" --verbose" if verbose else ""),
-                shell=True,
-                check=True,
-                capture_output=not verbose,
-            )
+            try:
+                subprocess.run(
+                    f"build-catalogue {self._name} {mod_path}"
+                    + (" --quiet" if not verbose else "")
+                    + (" --verbose" if verbose else ""),
+                    shell=True,
+                    check=True,
+                    capture_output=not verbose,
+                )
+            except subprocess.CalledProcessError as e:
+                print("BUILD CATALOGUE ERROR", e.output)
+                raise e
             os.makedirs(self._cache, exist_ok=True)
             shutil.copy2(f"{self._name}-catalogue.so", self._cache)
             os.chdir(pwd)
@@ -195,6 +204,3 @@ class Catalogue:
         cat_hashes = cache_data.setdefault("cat_hashes", dict())
         cat_hashes[self._name] = get_directory_hash(mod_path)
         Glia.update_cache(cache_data)
-
-        if mpi:
-            COMM_WORLD.Barrier()
