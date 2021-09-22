@@ -184,9 +184,10 @@ class Catalogue:
         with TemporaryDirectory() as tmp:
             pwd = os.getcwd()
             os.chdir(tmp)
+            cmd = f"build-catalogue {self._name} {mod_path}"
             try:
                 subprocess.run(
-                    f"build-catalogue {self._name} {mod_path}"
+                    cmd
                     + (" --quiet" if not verbose else "")
                     + (" --verbose" if verbose else ""),
                     shell=True,
@@ -196,13 +197,13 @@ class Catalogue:
             except subprocess.CalledProcessError as e:
                 msg_p = (
                     f"build-catalogue errored out with exitcode {e.returncode}",
-                    "---- build-catalogue output ----",
+                    f"Command: {cmd}\n---- build-catalogue output ----",
                     e.stdout.decode(),
                     "---- build-catalogue error  ----",
                     e.stderr.decode(),
                 )
                 msg = "\n\n".join(msg_p)
-                raise subprocess.CalledProcessError(msg) from None
+                raise BuildCatalogueError(msg) from None
             os.makedirs(self._cache, exist_ok=True)
             shutil.copy2(f"{self._name}-catalogue.so", self._cache)
             os.chdir(pwd)
