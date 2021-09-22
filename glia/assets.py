@@ -168,16 +168,25 @@ class Catalogue:
         try:
             from mpi4py.MPI import COMM_WORLD
         except:
-            # No mpi4py, assume no MPI, build local on all (hopefully 1) nodes
+            # No mpi4py, assume no MPI, build local on all (hopefully 1) nodes.
             self._build_local(verbose=verbose)
         else:
-            # mpi4pt detected, build local on node 0. All nodes wait for build
-            # to complete with a Barrier.
+            # mpi4pt detected, build local on node 0. Do a collective broadcast
+            # so that all processes can error out if a build error occurs on
+            # node 0.
+            build_err = None
             try:
                 if not COMM_WORLD.Get_rank():
                     self._build_local(verbose=verbose)
-            finally:
-                COMM_WORLD.Barrier()
+            except Exception as err:
+                build_err = COMM_WORLD.bcast(err, root=0)
+                raise err from None
+            else:
+                build_err = COMM_WORLD.bcast(build_err, root=0)
+                if build_err:
+                    raise BuildCatalogueError(
+                        "Catalogue build error, look for main node error."
+                    ) from None
 
     def _build_local(self, verbose=False):
         mod_path = self.get_mod_path()
