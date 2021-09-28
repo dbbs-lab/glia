@@ -16,5 +16,6 @@ _make_tree(
             PackageModError=_e(),
             PackageVersionError=_e(),
         ),
+        CatalogueError=_e(BuildCatalogueError=_e()),
     ),
 )
