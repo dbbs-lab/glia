@@ -5,7 +5,7 @@ from ._glia import Glia
 from ._hash import get_directory_hash
 import subprocess
 import shutil
-from tempfile import TemporaryDirectory
+from tempfile import mkdtemp, TemporaryDirectory
 
 
 class Package:
@@ -164,20 +164,23 @@ class Catalogue:
     def get_mod_path(self):
         return os.path.abspath(os.path.join(self._source, "mod"))
 
-    def build(self, verbose=False):
+    def build(self, verbose=None, debug=False):
+        # If verbose isn't explicitly set to False, turn it on if debug is on.
+        verbose = False if verbose is None else verbose or debug
+        run_build = lambda: self._build_local(verbose, debug)
         try:
             from mpi4py.MPI import COMM_WORLD
         except:
             # No mpi4py, assume no MPI, build local on all (hopefully 1) nodes.
-            self._build_local(verbose=verbose)
+            run_build()
         else:
-            # mpi4pt detected, build local on node 0. Do a collective broadcast
+            # mpi4py detected, build local on node 0. Do a collective broadcast
             # so that all processes can error out if a build error occurs on
             # node 0.
             build_err = None
             try:
                 if not COMM_WORLD.Get_rank():
-                    self._build_local(verbose=verbose)
+                    run_build()
             except Exception as err:
                 build_err = COMM_WORLD.bcast(err, root=0)
                 raise err from None
@@ -187,8 +190,22 @@ class Catalogue:
                     raise BuildCatalogueError(
                         "Catalogue build error, look for main node error."
                     ) from None
+                print("Catalogue built")
 
-    def _build_local(self, verbose=False):
+    def _build_local(self, verbose, debug):
+        global TemporaryDirectory
+
+        if debug:
+            # Overwrite the local reference to `TemporaryDirectory` with a
+            # context manager that doesn't clean up the build folder so that the
+            # generated cpp code can be debugged
+            class TemporaryDirectory:
+                def __enter__(*args, **kwargs):
+                    return mkdtemp()
+
+                def __exit__(*args, **kwargs):
+                    pass
+
         mod_path = self.get_mod_path()
         with TemporaryDirectory() as tmp:
             pwd = os.getcwd()
@@ -198,24 +215,30 @@ class Catalogue:
                 subprocess.run(
                     cmd
                     + (" --quiet" if not verbose else "")
-                    + (" --verbose" if verbose else ""),
+                    + (" --verbose" if verbose else "")
+                    + (" --debug" if debug else ""),
                     shell=True,
                     check=True,
                     capture_output=not verbose,
                 )
             except subprocess.CalledProcessError as e:
-                msg_p = (
-                    f"build-catalogue errored out with exitcode {e.returncode}",
-                    f"Command: {cmd}\n---- build-catalogue output ----",
-                    e.stdout.decode(),
-                    "---- build-catalogue error  ----",
-                    e.stderr.decode(),
-                )
+                msg_p = [f"build-catalogue errored out with exitcode {e.returncode}"]
+                if verbose:
+                    msg_p += ["Check log above for error."]
+                else:
+                    msg_p += [
+                        f"Command: {cmd}\n---- build-catalogue output ----",
+                        e.stdout.decode(),
+                        "---- build-catalogue error  ----",
+                        e.stderr.decode(),
+                    ]
                 msg = "\n\n".join(msg_p)
                 raise BuildCatalogueError(msg) from None
             os.makedirs(self._cache, exist_ok=True)
             shutil.copy2(f"{self._name}-catalogue.so", self._cache)
             os.chdir(pwd)
+            if debug:
+                print(f"Debug copy of catalogue in '{tmp}'")
         # Cache directory hash of current mod files so we only rebuild on source code changes.
         cache_data = Glia.read_cache()
         cat_hashes = cache_data.setdefault("cat_hashes", dict())

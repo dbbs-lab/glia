@@ -59,6 +59,12 @@ def glia_cli():
         func=lambda args: test(*args.mechanisms, verbose=args.verbose)
     )
 
+    build_parser = subparsers.add_parser("build", description="Build a catalogue.")
+    build_parser.add_argument("cat_name", action="store", help="Catalogue name")
+    build_parser.add_argument("--verbose", action="store_true", help="Verbose mode")
+    build_parser.add_argument("--debug", action="store_true", help="Debug mode")
+    build_parser.set_defaults(func=lambda args: _build_cat(args))
+
     cl_args = parser.parse_args()
     if hasattr(cl_args, "func"):
         try:
@@ -194,3 +200,7 @@ def _show_pkg(pkg_name):
         for mod in candidate.mods:
             print("  *", mod.mod_name)
         print()
+
+
+def _build_cat(args):
+    _manager.catalogues[args.cat_name].build(verbose=args.verbose, debug=args.debug)
