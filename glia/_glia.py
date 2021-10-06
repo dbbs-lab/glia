@@ -84,6 +84,7 @@ class Glia:
                 )
             self._catalogues[advert.name] = advert
 
+    @_requires_install
     def catalogue(self, name):
         import arbor
 
