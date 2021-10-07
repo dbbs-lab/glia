@@ -155,11 +155,17 @@ class Catalogue:
             cache_data = Glia.read_cache()
             # Backward compatibility with old installs that
             # have a JSON file without cat_hashes in it.
-            cache = cache_data.get("cat_hashes", dict()).get(self._name, None)
-            hash = get_directory_hash(self.get_mod_path())
-            return cache == hash
+            cached = cache_data.get("cat_hashes", dict()).get(self._name, None)
+            return cached == self._hash()
         except FileNotFoundError as _:
             return False
+
+    def _hash(self):
+        import arbor
+
+        source_hash = get_directory_hash(self.get_mod_path())
+        arbor_hash = str(arbor.config())
+        return source_hash + arbor_hash
 
     def get_mod_path(self):
         return os.path.abspath(os.path.join(self._source, "mod"))
@@ -242,5 +248,5 @@ class Catalogue:
         # Cache directory hash of current mod files so we only rebuild on source code changes.
         cache_data = Glia.read_cache()
         cat_hashes = cache_data.setdefault("cat_hashes", dict())
-        cat_hashes[self._name] = get_directory_hash(mod_path)
+        cat_hashes[self._name] = self._hash()
         Glia.update_cache(cache_data)
