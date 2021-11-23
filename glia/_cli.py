@@ -203,4 +203,6 @@ def _show_pkg(pkg_name):
 
 
 def _build_cat(args):
+    if not _manager._is_installed():
+        _manager._install_self()
     _manager.catalogues[args.cat_name].build(verbose=args.verbose, debug=args.debug)
