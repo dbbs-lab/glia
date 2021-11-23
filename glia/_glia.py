@@ -519,7 +519,7 @@ class Glia:
 
     @staticmethod
     def create_cache():
-        empty_cache = {"mod_hashes": {}}
+        empty_cache = {"mod_hashes": {}, "cat_hashes": {}}
         Glia.write_cache(empty_cache)
 
     @staticmethod
