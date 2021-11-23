@@ -478,6 +478,7 @@ class Glia:
         except IOError:
             return {}
 
+    @staticmethod
     def _write_shared_storage(data, *path):
         _path = Glia.get_data_path(*path)
         with open(_path, "w") as f:
