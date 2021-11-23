@@ -429,16 +429,10 @@ class Glia:
         return _installed
 
     def _install_self(self):
-        try:
-            os.makedirs(Glia.get_data_path())
-        except FileExistsError:
-            pass
+        os.makedirs(Glia.get_data_path(), exist_ok=True)
         Glia.create_cache()
         Glia.create_preferences()
-        try:
-            os.makedirs(Glia.get_cache_path())
-        except FileExistsError:
-            pass
+        os.makedirs(Glia.get_cache_path(), exist_ok=True)
         self._resolver = Resolver(self)
         self.compile()
 
