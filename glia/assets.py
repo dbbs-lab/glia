@@ -222,7 +222,7 @@ class Catalogue:
                     cmd
                     + (" --quiet" if not verbose else "")
                     + (" --verbose" if verbose else "")
-                    + (" --debug" if debug else ""),
+                    + (" --debug" if debug else "")
                     + (f" --gpu={gpu}" if gpu else ""),
                     shell=True,
                     check=True,

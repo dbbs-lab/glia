@@ -84,11 +84,21 @@ class Glia:
                 )
             self._catalogues[advert.name] = advert
 
+    def _get_catalogue(self, name):
+        try:
+            cat = self.catalogues[name]
+        except KeyError:
+            raise CatalogueError(f"Catalogue '{name}' not found.") from None
+        else:
+            return cat
+
     @_requires_install
     def catalogue(self, name):
-        import arbor
+        self._get_catalogue(name).load()
 
-        return self.catalogues[name].load()
+    @_requires_install
+    def build_catalogue(self, name, debug=False, verbose=False, gpu=None):
+        self._get_catalogue(name).build(verbose=verbose, debug=debug, gpu=gpu)
 
     @staticmethod
     def get_glia_path():
