@@ -94,11 +94,11 @@ class Glia:
 
     @_requires_install
     def catalogue(self, name):
-        self._get_catalogue(name).load()
+        return self._get_catalogue(name).load()
 
     @_requires_install
     def build_catalogue(self, name, debug=False, verbose=False, gpu=None):
-        self._get_catalogue(name).build(verbose=verbose, debug=debug, gpu=gpu)
+        return self._get_catalogue(name).build(verbose=verbose, debug=debug, gpu=gpu)
 
     @staticmethod
     def get_glia_path():
