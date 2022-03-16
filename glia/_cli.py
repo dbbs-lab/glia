@@ -63,6 +63,8 @@ def glia_cli():
     build_parser.add_argument("cat_name", action="store", help="Catalogue name")
     build_parser.add_argument("--verbose", action="store_true", help="Verbose mode")
     build_parser.add_argument("--debug", action="store_true", help="Debug mode")
+    print("adding gpu flag")
+    build_parser.add_argument("--gpu", action="store", help="Build with GPU support")
     build_parser.set_defaults(func=lambda args: _build_cat(args))
 
     cl_args = parser.parse_args()

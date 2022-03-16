@@ -170,10 +170,10 @@ class Catalogue:
     def get_mod_path(self):
         return os.path.abspath(os.path.join(self._source, "mod"))
 
-    def build(self, verbose=None, debug=False):
+    def build(self, verbose=None, debug=False, gpu=None):
         # If verbose isn't explicitly set to False, turn it on if debug is on.
         verbose = False if verbose is None else verbose or debug
-        run_build = lambda: self._build_local(verbose, debug)
+        run_build = lambda: self._build_local(verbose, debug, gpu)
         try:
             from mpi4py.MPI import COMM_WORLD
         except:
@@ -198,7 +198,7 @@ class Catalogue:
                     ) from None
                 print("Catalogue built")
 
-    def _build_local(self, verbose, debug):
+    def _build_local(self, verbose, debug, gpu):
         global TemporaryDirectory
 
         if debug:
@@ -223,6 +223,7 @@ class Catalogue:
                     + (" --quiet" if not verbose else "")
                     + (" --verbose" if verbose else "")
                     + (" --debug" if debug else ""),
+                    + (f" --gpu={gpu}" if gpu else ""),
                     shell=True,
                     check=True,
                     capture_output=not verbose,
