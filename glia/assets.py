@@ -216,7 +216,7 @@ class Catalogue:
         with TemporaryDirectory() as tmp:
             pwd = os.getcwd()
             os.chdir(tmp)
-            cmd = f"build-catalogue {self._name} {mod_path}"
+            cmd = f"arbor-build-catalogue {self._name} {mod_path}"
             try:
                 subprocess.run(
                     cmd
@@ -228,14 +228,14 @@ class Catalogue:
                     capture_output=not verbose,
                 )
             except subprocess.CalledProcessError as e:
-                msg_p = [f"build-catalogue errored out with exitcode {e.returncode}"]
+                msg_p = [f"ABC errored out with exitcode {e.returncode}"]
                 if verbose:
                     msg_p += ["Check log above for error."]
                 else:
                     msg_p += [
-                        f"Command: {cmd}\n---- build-catalogue output ----",
+                        f"Command: {cmd}\n---- ABC output ----",
                         e.stdout.decode(),
-                        "---- build-catalogue error  ----",
+                        "---- ABC error  ----",
                         e.stderr.decode(),
                     ]
                 msg = "\n\n".join(msg_p)
