@@ -3,15 +3,19 @@
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![Documentation Status](https://readthedocs.org/projects/nrn-glia/badge/?version=latest)](https://nrn-glia.readthedocs.io/en/latest/?badge=latest)
 
-# Glia: NEURON package manager
+# Glia: NMODL asset manager
 
-Glia is an asset manager for NEURON. It collects mod files from
+Glia is an NMODL asset manager for Arbor and NEURON. It collects mod files from
 different pip packages and compiles them into a central library that is
-automatically loaded into NEURON. This removes the need for compiling
-folder after folder with cluttered, duplicated mod files and allows you
+automatically loaded into NEURON, or catalogues for Arbor. 
+This removes the need for manual compiling and allows you
 to focus on using these mechanisms across multiple models.
 
-Packaging your mod files as a Glia package allows you to distribute them
+Changes in either the NMODL source code, or the simulator (e.g. when updating
+to a new version, or rebuilding from source) result in
+automatic recompilation of your mechanisms in the background.
+
+Packaging your mod files allows you to distribute them
 as dependencies of your Python models and delegates the installation,
 distribution, versioning and archiving of your assets to Python's packet
 manager pip.
