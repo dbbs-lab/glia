@@ -132,6 +132,14 @@ class Glia:
         return "0.0.3"
 
     @_requires_install
+    def package(self, name):
+        for pkg in self.packages:
+            if pkg.name == name:
+                return pkg
+        else:
+            raise PackageError(f"Package '{name}' not found.")
+
+    @_requires_install
     def load_library(self):
         if not self._compiled:
             self.compile(check_cache=True)

@@ -85,3 +85,13 @@ def catalogue(name):
     :type name: str
     """
     return _manager.catalogue(name)
+
+
+def package(name):
+    """
+    Return package.
+
+    :param name: Name of the installed glia package.
+    :type name: str
+    """
+    return _manager.package(name)
