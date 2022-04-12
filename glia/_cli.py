@@ -3,6 +3,9 @@ from . import _manager
 from .exceptions import *
 
 try:
+    from patch import p
+
+    p.nrnmpi_init()
     import mpi4py.MPI
 
     main_node = not mpi4py.MPI.COMM_WORLD.Get_rank()
