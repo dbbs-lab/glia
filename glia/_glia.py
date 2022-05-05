@@ -554,10 +554,10 @@ class Glia:
 
     def _should_skip_compile(self):
         print("Should we skip?", os.environ.get("GLIA_NOCOMPILE", False))
-        return os.environ.get("GLIA_NOCOMPILE", False)
+        return os.environ.get("GLIA_NOCOMPILE", "").upper() in ("1", "TRUE", "ON")
 
     def _should_skip_load(self):
-        return os.environ.get("GLIA_NOLOAD", False)
+        return os.environ.get("GLIA_NOLOAD", "").upper() in ("1", "TRUE", "ON")
 
 
 def _transform(obj):
