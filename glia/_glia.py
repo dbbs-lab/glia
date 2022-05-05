@@ -138,15 +138,15 @@ class Glia:
         :type check_cache: boolean
         """
         self._compiled = True
-        if self._should_skip_compile():
-            print("Not actually compiling")
-            return
         if not check_cache or not self.is_cache_fresh():
             self._compile()
 
     @_requires_install
     def _compile(self):
         assets, mod_files, cache_data = self._collect_asset_state()
+        if self._should_skip_compile():
+            print("Not actually compiling")
+            return self.update_cache(cache_data)
         if len(mod_files) == 0:
             return
         for i in self._distribute_n(len(mod_files)):
