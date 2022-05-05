@@ -138,6 +138,8 @@ class Glia:
         :type check_cache: boolean
         """
         self._compiled = True
+        if self._should_skip_compile():
+            return
         if not check_cache or not self.is_cache_fresh():
             self._compile()
 
@@ -386,6 +388,8 @@ class Glia:
 
             self.h = p
             self._loaded = True
+            if self._should_skip_load():
+                return
             for path in self.get_libraries():
                 dll_result = self.h.nrn_load_dll(path)
                 if not dll_result:
@@ -546,6 +550,12 @@ class Glia:
             ),
         )
         print("Packages:", ", ".join(map(lambda p: p.name, self.packages)))
+
+    def _should_skip_compile(self):
+        return os.environ.get("GLIA_NOCOMPILE", False)
+
+    def _should_skip_load(self):
+        return os.environ.get("GLIA_NOLOAD", False)
 
 
 def _transform(obj):
