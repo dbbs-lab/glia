@@ -139,6 +139,7 @@ class Glia:
         """
         self._compiled = True
         if self._should_skip_compile():
+            print("Not actually compiling")
             return
         if not check_cache or not self.is_cache_fresh():
             self._compile()
@@ -552,6 +553,7 @@ class Glia:
         print("Packages:", ", ".join(map(lambda p: p.name, self.packages)))
 
     def _should_skip_compile(self):
+        print("Should we skip?", os.environ.get("GLIA_NOCOMPILE", False))
         return os.environ.get("GLIA_NOCOMPILE", False)
 
     def _should_skip_load(self):
