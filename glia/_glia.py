@@ -162,6 +162,9 @@ class Glia:
     @_requires_install
     def _compile(self):
         assets, mod_files, cache_data = self._collect_asset_state()
+        if self._should_skip_compile():
+            print("Not actually compiling")
+            return self.update_cache(cache_data)
         if len(mod_files) == 0:
             return
         for i in self._distribute_n(len(mod_files)):
@@ -404,6 +407,8 @@ class Glia:
 
             self.h = p
             self._loaded = True
+            if self._should_skip_load():
+                return
             for path in self.get_libraries():
                 dll_result = self.h.nrn_load_dll(path)
                 if not dll_result:
@@ -564,6 +569,13 @@ class Glia:
             ),
         )
         print("Packages:", ", ".join(map(lambda p: p.name, self.packages)))
+
+    def _should_skip_compile(self):
+        print("Should we skip?", os.environ.get("GLIA_NOCOMPILE", False))
+        return os.environ.get("GLIA_NOCOMPILE", "").upper() in ("1", "TRUE", "ON")
+
+    def _should_skip_load(self):
+        return os.environ.get("GLIA_NOLOAD", "").upper() in ("1", "TRUE", "ON")
 
 
 def _transform(obj):
