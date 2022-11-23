@@ -312,9 +312,7 @@ class Glia:
         return True
 
     @_requires_library
-    def insert(
-        self, section, asset, variant=None, pkg=None, /, attributes=None, x=None
-    ):
+    def insert(self, section, asset, variant=None, pkg=None, /, attributes=None, x=None):
         """
         Insert a mechanism or point process into a Section.
 
@@ -432,9 +430,7 @@ class Glia:
         else:
             path = ["x86_64", ".libs", "libnrnmech.so"]
 
-        return [
-            os.path.join(folder, *path) for folder in glob(Glia.get_cache_path("*/"))
-        ]
+        return [os.path.join(folder, *path) for folder in glob(Glia.get_cache_path("*/"))]
 
     def is_cache_fresh(self):
         try:
