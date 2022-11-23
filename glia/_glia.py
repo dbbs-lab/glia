@@ -1,10 +1,10 @@
 import os, sys, pkg_resources, json, subprocess
+import weakref
 from shutil import copy2 as copy_file, rmtree as rmdir
 from functools import wraps
 from ._hash import get_directory_hash, hash_path
-from .exceptions import *
+from .exceptions import LibraryError, CompileError, NeuronError
 from .resolution import Resolver
-import requests
 import appdirs
 from glob import glob
 
@@ -30,6 +30,14 @@ def _requires_library(func):
         return func(self, *args, **kwargs)
 
     return wrapper
+
+
+def _should_skip_compile():
+    return os.environ.get("GLIA_NOCOMPILE", "").upper() in ("1", "TRUE", "ON")
+
+
+def _should_skip_load():
+    return os.environ.get("GLIA_NOLOAD", "").upper() in ("1", "TRUE", "ON")
 
 
 class Glia:
@@ -162,8 +170,7 @@ class Glia:
     @_requires_install
     def _compile(self):
         assets, mod_files, cache_data = self._collect_asset_state()
-        if self._should_skip_compile():
-            print("Not actually compiling")
+        if _should_skip_compile():
             return self.update_cache(cache_data)
         if len(mod_files) == 0:
             return
@@ -305,7 +312,9 @@ class Glia:
         return True
 
     @_requires_library
-    def insert(self, section, asset, attributes=None, pkg=None, variant=None, x=0.5):
+    def insert(
+        self, section, asset, variant=None, pkg=None, /, attributes=None, x=None
+    ):
         """
         Insert a mechanism or point process into a Section.
 
@@ -333,6 +342,7 @@ class Glia:
             mod_name = self.resolver.resolve(asset, pkg=pkg, variant=variant)
         mod = self.resolver.lookup(mod_name)
         if mod.is_point_process:  # Insert point process
+            x = x if x is not None else 0.5
             try:
                 # Create a point process
                 point_process = getattr(self.h, mod_name)(section(x))
@@ -345,24 +355,20 @@ class Glia:
                     raise
                 else:
                     raise LibraryError(
-                        "'{}' is marked as a point process, but isn't a point process in the NEURON library".format(
-                            mod_name
-                        )
+                        f"'{mod_name}' is marked as a point process, but isn't a point "
+                        "process in the NEURON library"
                     ) from None
-            for key, value in attributes.items():
-                setattr(point_process, key, value)
-            return point_process
+            ma = MechAccessor(section, mod, point_process)
         else:  # Insert mechanism
             try:
-                r = section.insert(mod_name)
-                for attribute, value in attributes.items():
-                    setattr(nrn_section, attribute + "_" + mod_name, value)
-                return r
+                section.insert(mod_name)
             except ValueError as e:
                 if str(e).find("argument not a density mechanism name") != -1:
-                    raise LibraryError(
-                        "'{}' mechanism not found".format(mod_name)
-                    ) from None
+                    raise LibraryError(f"'{mod_name}' mechanism not found") from None
+            ma = MechAccessor(section, mod)
+        if attributes is not None:
+            ma.set(attributes)
+        return ma
 
     @_requires_install
     def select(self, asset_name, glbl=False, pkg=None, variant=None):
@@ -407,7 +413,7 @@ class Glia:
 
             self.h = p
             self._loaded = True
-            if self._should_skip_load():
+            if _should_skip_load():
                 return
             for path in self.get_libraries():
                 dll_result = self.h.nrn_load_dll(path)
@@ -426,7 +432,9 @@ class Glia:
         else:
             path = ["x86_64", ".libs", "libnrnmech.so"]
 
-        return [os.path.join(folder, *path) for folder in glob(Glia.get_cache_path("*/"))]
+        return [
+            os.path.join(folder, *path) for folder in glob(Glia.get_cache_path("*/"))
+        ]
 
     def is_cache_fresh(self):
         try:
@@ -570,13 +578,6 @@ class Glia:
         )
         print("Packages:", ", ".join(map(lambda p: p.name, self.packages)))
 
-    def _should_skip_compile(self):
-        print("Should we skip?", os.environ.get("GLIA_NOCOMPILE", False))
-        return os.environ.get("GLIA_NOCOMPILE", "").upper() in ("1", "TRUE", "ON")
-
-    def _should_skip_load(self):
-        return os.environ.get("GLIA_NOLOAD", "").upper() in ("1", "TRUE", "ON")
-
 
 def _transform(obj):
     # Transform an object to its NEURON counterpart, if possible, otherwise
@@ -602,3 +603,58 @@ def _remove_tree(path):
                 os.remove(os.path.join(path, file))
             except PermissionError as _:
                 print("Couldn't remove", file)
+
+
+class MechAccessor:
+    def __init__(self, section, mod, point_process=None):
+        self._section_name = section.hname()
+        self._section = weakref.proxy(section)
+        self._mod = mod
+        self._pp = point_process
+
+    def set(self, attribute_or_dict, value=None, /, x=None):
+        if value is None:
+            for k, v in attribute_or_dict.items():
+                self.set_parameter(k, v, x)
+        else:
+            self.set_parameter(attribute_or_dict, value, x)
+
+    def set_parameter(self, param, value, x=None):
+        mod = self._mod.mod_name
+        if self._pp is not None:
+            return setattr(self._pp, param, value)
+        try:
+            if x is None:
+                setattr(self._section.__neuron__(), f"{param}_{mod}", value)
+            else:
+                setattr(getattr(self._section(x), mod), value)
+        except ReferenceError:
+            raise ReferenceError(
+                "Trying to set attribute on section"
+                f" '{self._section_name}' that has since been garbage collected"
+            )
+
+    def get_parameter(self, param, x=None):
+        if self._pp is not None:
+            return getattr(self._pp, param)
+        mod = self._mod.mod_name
+        try:
+            if x is None:
+                return getattr(self._section.__neuron__(), f"{param}_{mod}")
+            else:
+                return getattr(getattr(self._section(x), mod), param)
+        except ReferenceError:
+            raise ReferenceError(
+                "Trying to set attribute on section"
+                f" '{self._section_name}' that has since been garbage collected"
+            )
+        except AttributeError:
+            raise AttributeError(
+                f"Parameter '{param}' does not exist on {self._mod.asset_name}"
+            ) from None
+
+    @property
+    def parameters(self):
+        raise NotImplementedError(
+            "Parameter overview not implemented yet. Use `get_parameter` instead."
+        )

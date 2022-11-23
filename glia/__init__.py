@@ -9,7 +9,7 @@ from .exceptions import *
 _manager = Glia()
 
 
-def insert(section, asset, attributes=None, pkg=None, variant=None, x=0.5):
+def insert(section, asset, variant=None, pkg=None, /, attributes=None, x=None):
     """
     Insert a mechanism or point process into a Section.
 
@@ -27,9 +27,7 @@ def insert(section, asset, attributes=None, pkg=None, variant=None, x=0.5):
     :type x: float
     :raises: LibraryError if the asset isn't found or was incorrectly marked as a point process.
     """
-    return _manager.insert(
-        section, asset, attributes=attributes, pkg=pkg, variant=variant, x=x
-    )
+    return _manager.insert(section, asset, variant, pkg, attributes, x)
 
 
 def resolve(asset, pkg=None, variant=None):
