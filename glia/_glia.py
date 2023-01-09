@@ -3,7 +3,13 @@ import weakref
 from shutil import copy2 as copy_file, rmtree as rmdir
 from functools import wraps
 from ._hash import get_directory_hash, hash_path
-from .exceptions import LibraryError, CompileError, NeuronError
+from .exceptions import (
+    CatalogueError,
+    LibraryError,
+    CompileError,
+    NeuronError,
+    PackageError,
+)
 from .resolution import Resolver
 import appdirs
 from glob import glob
@@ -464,31 +470,30 @@ class Glia:
         self.compile()
 
     def _add_neuron_pkg(self):
-        import neuron
-        from neuron import h
-        from .assets import Package, Mod
+        try:
+            import neuron
+            from neuron import h
+        except ImportError:
+            pass
+        else:
+            from patch import is_point_process, is_density_mechanism
+            from .assets import Package, Mod
 
-        nrn_pkg = Package("NEURON", neuron.__path__[0], builtin=True)
-        builtin_mechs = []
-        # Get all the builtin mechanisms by triggering a TypeError (NEURON 7.7 or below)
-        # Or by it being a "DensityMechanism" (NEURON 7.8 or above)
-        for k in dir(h):
-            try:
-                m = str(getattr(h, k))
-                if "neuron.DensityMechanism" in m:
-                    builtin_mechs.append(k)
-            except TypeError as e:
-                if "mechanism" in str(e):
-                    builtin_mechs.append(k)
-            except:
-                pass
-
-        for mech in builtin_mechs:
-            mod = Mod(nrn_pkg, mech, 0, builtin=True)
-            nrn_pkg.mods.append(mod)
-        self.packages.append(nrn_pkg)
-        if self.resolver:
-            self.resolver.construct_index()
+            nrn_pkg = Package("NEURON", neuron.__path__[0], builtin=True)
+            builtin_mechs = []
+            # Get all the builtin mechanisms by triggering a TypeError (NEURON 7.7 or
+            # below) Or by it being a "DensityMechanism" (NEURON 7.8 or above)
+            for key in dir(h):
+                if is_density_mechanism(key):
+                    builtin_mechs.append((key, False))
+                elif is_point_process(key):
+                    builtin_mechs.append((key, True))
+            for mech, point_process in builtin_mechs:
+                mod = Mod(nrn_pkg, mech, 0, builtin=True, is_point_process=point_process)
+                nrn_pkg.mods.append(mod)
+            self.packages.append(nrn_pkg)
+            if self.resolver:
+                self.resolver.construct_index()
 
     def get_mod_path(self, pkg):
         return os.path.abspath(os.path.join(pkg.path, "mod"))
@@ -607,6 +612,45 @@ class MechAccessor:
         self._section = weakref.proxy(section)
         self._mod = mod
         self._pp = point_process
+        self._references = []
+
+    def __neuron__(self):
+        if self._pp is not None:
+            try:
+                from patch import transform
+
+                return transform(self._pp)
+            except Exception:
+                pass
+            return self._pp
+        else:
+            raise TypeError(
+                "Density mechanisms can't be retrieved as a standalone Patch/NEURON "
+                "entity. "
+            )
+
+    def __ref__(self, other):
+        self._references.append(other)
+
+    def __deref__(self, other):
+        self._references.remove(other)
+
+    @property
+    def _connections(self):
+        try:
+            return self._pp._connections
+        except AttributeError:
+            raise TypeError("Can't connect Patch/NEURON entities to a density mechanism.")
+
+    @_connections.setter
+    def _connections(self, value):
+        self._pp._connections = value
+
+    def stimulate(self, *args, **kwargs):
+        if self._pp is not None:
+            return self._pp.stimulate(*args, **kwargs)
+        else:
+            raise TypeError("Can't stimulate a DensityMechanism.")
 
     def set(self, attribute_or_dict, value=None, /, x=None):
         if value is None:
