@@ -1,4 +1,4 @@
-setuptools==49.2.1
+setuptools==65.5.1
 packaging==20.4
 nrn-patch==3.0.0b0
 requests==2.25.0
