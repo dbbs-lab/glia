@@ -10,16 +10,6 @@ with open(os.path.join(os.path.dirname(__file__), "glia", "__init__.py"), "r") a
             exec(line)
             break
 
-deps = [
-    "setuptools",
-    "requests",
-    "packaging>=19.0",
-    "appdirs",
-    "errr",
-]
-if not os.getenv("READTHEDOCS"):
-    deps.append("nrn-patch>=3.0.0b0")
-
 
 setuptools.setup(
     name="nrn-glia",
@@ -37,6 +27,11 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     entry_points={"console_scripts": ["glia = glia._cli:glia_cli"]},
-    install_requires=deps,
-    extras_require={"dev": ["sphinx", "pre-commit"]},
+    install_requires=["appdirs", "errr>=1.2.0"],
+    extras_require={
+        "dev": ["sphinx", "pre-commit"],
+        "neuron": ["nrn-patch>=4.0.0a0"],
+        "arbor": ["arbor>=0.6"],
+        "mpi": ["mpi4py"],
+    },
 )

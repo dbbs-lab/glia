@@ -2,4 +2,4 @@
 line-length = 90
 
 [build-system]
-requires = ["setuptools>=40.0.0", "wheel", "packaging>=19.0", "nrn-patch>=1.0.2", "requests>=2.22.0"]
+requires = ["setuptools>=40.0.0", "wheel", "packaging>=19.0"]
