@@ -1,4 +1,5 @@
 from errr.tree import make_tree as _make_tree, exception as _e
+from typing import Type
 
 _make_tree(
     globals(),
@@ -19,3 +20,18 @@ _make_tree(
         CatalogueError=_e(BuildCatalogueError=_e()),
     ),
 )
+
+GliaError: Type[Exception]
+CompileError: Type[GliaError]
+LibraryError: Type[GliaError]
+NeuronError: Type[GliaError]
+LookupError: Type[GliaError]
+ResolveError: Type[GliaError]
+TooManyMatchesError: Type[ResolveError]
+NoMatchesError: Type[ResolveError]
+UnknownAssetError: Type[ResolveError]
+PackageError: Type[GliaError]
+PackageModError: Type[PackageError]
+PackageVersionError: Type[PackageError]
+CatalogueError: Type[GliaError]
+BuildCatalogueError: Type[CatalogueError]
