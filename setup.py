@@ -30,7 +30,7 @@ setuptools.setup(
     install_requires=["appdirs", "errr>=1.2.0"],
     extras_require={
         "dev": ["sphinx", "pre-commit"],
-        "neuron": ["nrn-patch>=4.0.0a0"],
+        "neuron": ["nrn-patch==4.0.0a4"],
         "arbor": ["arbor>=0.6"],
         "mpi": ["mpi4py"],
     },

@@ -1,6 +1,6 @@
 import os, sys
 
-__version__ = "4.0.0a1"
+__version__ = "4.0.0a4"
 
 from ._glia import Glia
 from .exceptions import *
