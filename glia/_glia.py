@@ -652,6 +652,17 @@ class MechAccessor:
         else:
             raise TypeError("Can't stimulate a DensityMechanism.")
 
+    def record(self):
+        from patch import p
+
+        return p.record(self)
+
+    def __record__(self):
+        if self._pp is not None:
+            return self._pp.__record__()
+        else:
+            raise TypeError("Can't stimulate a DensityMechanism.")
+
     def set(self, attribute_or_dict, value=None, /, x=None):
         if value is None:
             for k, v in attribute_or_dict.items():
