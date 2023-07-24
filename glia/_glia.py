@@ -652,16 +652,23 @@ class MechAccessor:
         else:
             raise TypeError("Can't stimulate a DensityMechanism.")
 
-    def record(self):
+    def record(self, param=None, x=0.5):
         from patch import p
 
-        return p.record(self)
+        if param is not None and self._pp is None:
+            return p.record(
+                getattr(self._section(x), f"_ref_{param}_{self._mod.mod_name}")
+            )
+        else:
+            return p.record(self)
 
     def __record__(self):
         if self._pp is not None:
             return self._pp.__record__()
         else:
-            raise TypeError("Can't stimulate a DensityMechanism.")
+            raise TypeError(
+                "No default record for DensityMechanisms, use .record('param') instead."
+            )
 
     def set(self, attribute_or_dict, value=None, /, x=None):
         if value is None:
