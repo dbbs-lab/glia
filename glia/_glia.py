@@ -1,5 +1,6 @@
-import os, sys, pkg_resources, json, subprocess
+import os, sys, json, subprocess
 import weakref
+from importlib.metadata import entry_points
 from shutil import copy2 as copy_file, rmtree as rmdir
 from functools import wraps
 from ._hash import get_directory_hash, hash_path
@@ -80,14 +81,14 @@ class Glia:
         from .assets import Package
 
         self._packages = []
-        for pkg_ptr in pkg_resources.iter_entry_points("glia.package"):
+        for pkg_ptr in entry_points().get("glia.package", []):
             advert = pkg_ptr.load()
             self.entry_points.append(advert)
             self._packages.append(Package.from_remote(self, advert))
 
     def discover_catalogues(self):
         self._catalogues = {}
-        for pkg_ptr in pkg_resources.iter_entry_points("glia.catalogue"):
+        for pkg_ptr in entry_points().get("glia.catalogue", []):
             advert = pkg_ptr.load()
             self.entry_points.append(advert)
             if advert.name in self._catalogues:
