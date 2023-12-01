@@ -1,13 +1,14 @@
 import os
 import subprocess
 import sys
+import warnings
 import weakref
 from functools import wraps
-from glob import glob
 from importlib.metadata import entry_points
 from shutil import copy2 as copy_file
 from shutil import rmtree as rmdir
 
+from . import _mpi
 from ._fs import (
     create_cache,
     create_preferences,
@@ -92,8 +93,11 @@ class Glia:
 
     def discover_packages(self):
         self._packages = []
+        print("AND?")
         for pkg_ptr in entry_points().get("glia.package", []):
+            print("AND2?", pkg_ptr)
             advert = pkg_ptr.load()
+            print("stuck??")
             self.entry_points.append(advert)
             self._packages.append(Package.from_remote(self, advert))
 
@@ -126,7 +130,7 @@ class Glia:
     def build_catalogue(self, name, debug=False, verbose=False, gpu=None):
         return self._get_catalogue(name).build(verbose=verbose, debug=debug, gpu=gpu)
 
-    def start(self, load_dll=True):
+    def start(self):
         self.compile(check_cache=True)
 
     @_requires_install
@@ -155,7 +159,9 @@ class Glia:
         """
         self._compiled = True
         if not check_cache or not self.is_cache_fresh():
-            self._compile()
+            if _mpi.main_node:
+                self._compile()
+            _mpi.barrier()
 
     @_requires_install
     def _compile(self):
@@ -164,51 +170,31 @@ class Glia:
             return update_cache(cache_data)
         if len(mod_files) == 0:
             return
-        for i in self._distribute_n(len(mod_files)):
-            self._compile_nrn_mod(assets[i], mod_files[i])
+        neuron_mod_path = get_neuron_mod_path()
+        _remove_tree(neuron_mod_path)
+        # Copy over fresh mods
+        for file in mod_files:
+            copy_file(file, neuron_mod_path)
+        # Platform specific compile
+        if sys.platform == "win32":
+            self._compile_nrn_windows(neuron_mod_path)
+        elif sys.platform in ("linux", "darwin"):
+            self._compile_nrn_linux(neuron_mod_path)
+        else:
+            raise NotImplementedError(
+                "Only linux and win32 are supported. You are using " + sys.platform
+            )
         # Update the cache with the new mod directory hashes.
         update_cache(cache_data)
 
-    def _compile_nrn_mod(self, asset, file):
-        mod_path = get_neuron_mod_path(asset[1].mod_name)
-        os.makedirs(mod_path, exist_ok=True)
-        # Clean out previous files inside of the mod path
-        _remove_tree(mod_path)
-        # Copy over the mod file
-        copy_file(file, mod_path)
-        # Platform specific compile
-        if sys.platform == "win32":
-            self._compile_nrn_windows(mod_path)
-        elif sys.platform in ("linux", "darwin"):
-            self._compile_nrn_linux(mod_path)
-        else:
-            raise NotImplementedError(
-                "Only linux, darwin and win32 are supported. You are using "
-                + sys.platform
-            )
-
-    def _distribute_n(self, n):
-        try:
-            from mpi4py.MPI import COMM_WORLD
-        except ImportError:
-            return range(0, n)
-        else:
-            r = COMM_WORLD.Get_rank()
-            s = COMM_WORLD.Get_size()
-            return range(r, n, s)
-
     def _compile_nrn_windows(self, neuron_mod_path):
         # Compile the glia cache for Linux.
-        # Swap the python process's current working directory to the glia mod directory
-        # and run mknrndll.sh in mingw. This approach works even when the PATH isn't set
-        # properly by the installer.
+        # Runs %NEURONHOME%/nrnivmodl.bat
         from patch import p
 
-        nrn_path = p.neuronhome()
-        current_dir = os.getcwd()
-        os.chdir(neuron_mod_path)
         process = subprocess.Popen(
-            [os.path.join(nrn_path, "bin", "nrnivmodl.bat")],
+            [os.path.join(p.neuronhome(), "bin", "nrnivmodl.bat")],
+            cwd=neuron_mod_path,
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -216,18 +202,15 @@ class Glia:
 
         stdout, stderr = process.communicate(input=b"\n")
         self._compilation_failed = process.returncode != 0
-        os.chdir(current_dir)
         if process.returncode != 0:
             raise CompileError(stderr.decode("UTF-8"))
 
     def _compile_nrn_linux(self, neuron_mod_path):
         # Compile the glia cache for Linux.
-        # Swap the python process's current working directory to the glia mod directory
-        # and run nrnivmodl.
-        current_dir = os.getcwd()
-        os.chdir(neuron_mod_path)
+        # Runs nrnivmodl.
         process = subprocess.Popen(
             ["nrnivmodl"],
+            cwd=neuron_mod_path,
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -235,7 +218,6 @@ class Glia:
 
         stdout, stderr = process.communicate()
         self._compiled = process.returncode == 0
-        os.chdir(current_dir)
         if process.returncode != 0:
             raise CompileError(stderr.decode("UTF-8"))
 
@@ -295,11 +277,9 @@ class Glia:
         :type x: float
         :raises: LibraryError if the asset isn't found or was incorrectly marked as a point process.
         """
-        # Transform the given section into a NEURON section.
-        nrn_section = _transform(section)
         if attributes is None:
             attributes = {}
-        if asset.startswith("glia"):
+        if asset.startswith("glia__"):
             mod_name = asset
         else:
             mod_name = self.resolver.resolve(asset, pkg=pkg, variant=variant)
@@ -387,15 +367,14 @@ class Glia:
 
     def get_libraries(self):
         """
-        Return the locations of the library paths (dll/so) to be loaded into NEURON. Or
-        perhaps for use in dark neuroscientific rituals, who knows.
+        Return the locations of the library paths (dll/so) to be loaded into NEURON.
         """
         if sys.platform == "win32":
             path = ["nrnmech.dll"]
         else:
             path = ["x86_64", ".libs", "libnrnmech.so"]
 
-        return [os.path.join(folder, *path) for folder in glob(get_cache_path("*/"))]
+        return [get_neuron_mod_path(*path)]
 
     def is_cache_fresh(self):
         try:
@@ -433,6 +412,7 @@ class Glia:
         except ImportError:
             pass
         else:
+            import patch
             from patch import is_density_mechanism, is_point_process
 
             nrn_pkg = Package("NEURON", neuron.__path__[0], builtin=True)
@@ -477,7 +457,6 @@ def _transform(obj):
 
 
 def _remove_tree(path):
-    # Clear compiled mods
     for root, dirs, files in os.walk(path):
         for dir in dirs:
             try:
@@ -488,7 +467,7 @@ def _remove_tree(path):
             try:
                 os.remove(os.path.join(path, file))
             except PermissionError as _:
-                print("Couldn't remove", file)
+                warnings.warn(f"Couldn't remove {file}")
 
 
 class MechAccessor:

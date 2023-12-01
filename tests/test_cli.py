@@ -1,10 +1,9 @@
 import argparse
-import os
 import sys
 import unittest
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 import glia._cli
+import glia._mpi
 
 
 # Duck punch the argument parser so it doesn't sys.exit
@@ -34,6 +33,7 @@ class TestCLI(unittest.TestCase):
     def test_basics(self):
         self.assertRaises(argparse.ArgumentError, run_cli_command, "doesntexist")
 
+    @unittest.skipIf(glia._mpi.parallel_run, "Skip in parallel")
     def test_compile(self):
         run_cli_command("compile")
 

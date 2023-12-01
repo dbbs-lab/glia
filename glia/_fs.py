@@ -26,6 +26,7 @@ def get_cache_path(*subfolders, prefix=""):
         *subfolders,
     )
 
+
 def get_data_path(*subfolders):
     return os.path.join(_install_dirs.user_data_dir, *subfolders)
 
@@ -33,8 +34,10 @@ def get_data_path(*subfolders):
 def get_mod_path(pkg):
     return os.path.abspath(os.path.join(pkg.path, "mod"))
 
+
 def get_neuron_mod_path(*paths):
     return get_cache_path(*paths)
+
 
 def _read_shared_storage(*path):
     _path = get_data_path(*path)
@@ -44,10 +47,12 @@ def _read_shared_storage(*path):
     except IOError:
         return {}
 
+
 def _write_shared_storage(data, *path):
     _path = get_data_path(*path)
     with open(_path, "w") as f:
         f.write(json.dumps(data))
+
 
 def read_storage(*path):
     data = _read_shared_storage(*path)
@@ -56,6 +61,7 @@ def read_storage(*path):
         return {}
     return data[glia_path]
 
+
 def write_storage(data, *path):
     _path = get_data_path(*path)
     glia_path = get_glia_path()
@@ -63,29 +69,36 @@ def write_storage(data, *path):
     shared_data[glia_path] = data
     _write_shared_storage(shared_data, *path)
 
+
 def read_cache():
     cache = read_storage("cache.json")
     if "mod_hashes" not in cache:
         cache["mod_hashes"] = {}
     return cache
 
+
 def write_cache(cache_data):
     write_storage(cache_data, "cache.json")
+
 
 def update_cache(cache_data):
     cache = read_cache()
     cache.update(cache_data)
     write_cache(cache)
 
+
 def create_cache():
     empty_cache = {"mod_hashes": {}, "cat_hashes": {}}
     write_cache(empty_cache)
 
+
 def read_preferences():
     return read_storage("preferences.json")
 
+
 def write_preferences(preferences):
     write_storage(preferences, "preferences.json")
+
 
 def create_preferences():
     write_storage({}, "preferences.json")

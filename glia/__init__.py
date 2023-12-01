@@ -2,7 +2,7 @@
 NMODL Asset Manager.
 """
 
-__version__ = "4.0.0b0"
+__version__ = "4.0.0b1"
 
 from ._glia import Glia
 from .exceptions import *

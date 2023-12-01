@@ -1,22 +1,21 @@
-import importlib
+import importlib.util
 import os
-import sys
 import unittest
 
 import glia._glia
-from glia._fs import get_neuron_mod_path, read_cache
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+from glia._fs import read_cache
 
 
+@unittest.skipIf(
+    not importlib.util.find_spec("glia_test_mods"),
+    "Package discovery should be tested with the `glia_test_mods` package installed.",
+)
 class TestPackageDiscovery(unittest.TestCase):
     """
     Check if packages can be discovered.
     """
 
     def test_discovery(self):
-        import glia
-
         self.assertGreater(len(glia._manager.packages), 0)
 
     def test_caching(self):
@@ -36,15 +35,12 @@ class TestCompilation(unittest.TestCase):
         glia.compile()
 
     def test_compilation(self):
-        from glob import glob
-
         import glia
 
-        path = get_neuron_mod_path()
-        # Check that with `glia_test_mods` installed there are 3 mechanism folders
-        self.assertEqual(len(glob(os.path.join(path, "*/"))), 3)
-        # Check that all 3 libraries are picked up by `get_libraries`
-        self.assertEqual(len(glia._manager.get_libraries()), 3)
+        # Check that the library files exist
+        for path in glia._manager.get_libraries():
+            with self.subTest(path=path):
+                self.assertTrue(os.path.exists(path), "Missing library file")
 
     def test_insert(self):
         from patch import p

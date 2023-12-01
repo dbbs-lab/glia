@@ -1,8 +1,9 @@
 import os
 import shutil
 import subprocess
-from tempfile import mkdtemp
+from tempfile import TemporaryDirectory, mkdtemp
 
+from . import _mpi
 from ._fs import get_cache_path, read_cache, update_cache
 from ._hash import get_directory_hash
 from .exceptions import *
@@ -159,49 +160,39 @@ class Catalogue:
         return os.path.abspath(os.path.join(self._source, "mod"))
 
     def build(self, verbose=None, debug=False, gpu=None):
-        # If verbose isn't explicitly set to False, turn it on if debug is on.
-        verbose = False if verbose is None else verbose or debug
+        # Turn verbosity on if debug is on, unless it's explicitly toggled off.
+        verbose = False if verbose is False else verbose or debug
         run_build = lambda: self._build_local(verbose, debug, gpu)
+        build_err = None
         try:
-            from mpi4py.MPI import COMM_WORLD
-        except:
-            # No mpi4py, assume no MPI, build local on all (hopefully 1) nodes.
-            run_build()
+            if _mpi.main_node:
+                run_build()
+        except Exception as err:
+            _mpi.bcast(err)
+            raise err from None
         else:
-            # mpi4py detected, build local on node 0. Do a collective broadcast
-            # so that all processes can error out if a build error occurs on
-            # node 0.
-            build_err = None
-            try:
-                if not COMM_WORLD.Get_rank():
-                    run_build()
-            except Exception as err:
-                build_err = COMM_WORLD.bcast(err, root=0)
-                raise err from None
-            else:
-                build_err = COMM_WORLD.bcast(build_err, root=0)
-                if build_err:
-                    raise BuildCatalogueError(
-                        "Catalogue build error, look for main node error."
-                    ) from None
-                print("Catalogue built")
+            build_err = _mpi.bcast(build_err)
+            if build_err:
+                raise BuildCatalogueError(
+                    "Catalogue build error, look for main node error."
+                ) from None
 
     def _build_local(self, verbose, debug, gpu):
-        global TemporaryDirectory
-
+        tmp_dir = TemporaryDirectory
         if debug:
-            # Overwrite the local reference to `TemporaryDirectory` with a
-            # context manager that doesn't clean up the build folder so that the
-            # generated cpp code can be debugged
-            class TemporaryDirectory:
+            # Temp dir context manager that doesn't clean up the build folder so that
+            # the generated cpp code can be debugged
+            class TmpDir:
                 def __enter__(*args, **kwargs):
                     return mkdtemp()
 
                 def __exit__(*args, **kwargs):
                     pass
 
+            tmp_dir = TmpDir
+
         mod_path = self.get_mod_path()
-        with TemporaryDirectory() as tmp:
+        with tmp_dir() as tmp:
             pwd = os.getcwd()
             os.chdir(tmp)
             cmd = f"arbor-build-catalogue {self._name} {mod_path}"

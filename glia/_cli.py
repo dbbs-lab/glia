@@ -1,18 +1,8 @@
 import argparse
 import sys
 
-from . import _manager
+from . import _manager, _mpi
 from .exceptions import *
-
-try:
-    from patch import p
-
-    p.nrnmpi_init()
-    import mpi4py.MPI
-
-    main_node = not mpi4py.MPI.COMM_WORLD.Get_rank()
-except ImportError:
-    main_node = True
 
 
 def glia_cli():
@@ -81,13 +71,15 @@ def glia_cli():
 
 
 def compile(args):
-    if main_node:
+    if _mpi.main_node:
         print("Glia is compiling...")
-    _manager._compile()
-    if main_node:
+    print("huh")
+    _manager.compile()
+    print("huh2")
+    if _mpi.main_node:
         print("Compilation complete!")
     assets, _, _ = _manager._collect_asset_state()
-    if main_node:
+    if _mpi.main_node:
         print(
             "Compiled assets:",
             ", ".join(
@@ -130,12 +122,12 @@ def test(*args, verbose=False):
         except LookupError as e:
             mstr = "[X]"
             estr = str(e)
-        if main_node:
+        if _mpi.main_node:
             print(mstr, mechanism)
         if verbose and estr != "":
-            if main_node:
+            if _mpi.main_node:
                 print("  -- " + estr)
-    if main_node:
+    if _mpi.main_node:
         print("Tests finished:", successes, "out of", tests, "passed")
 
 

@@ -9,6 +9,10 @@ readme = "README.md"
 license = {file = "LICENSE"}
 classifiers = ["License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)"]
 dynamic = ["version", "description"]
+dependencies= [
+    "appdirs~=1.0",
+    "errr>=1.2.0",
+]
 
 [tool.flit.module]
 name = "glia"
@@ -22,6 +26,12 @@ glia = "glia._cli:glia_cli"
 [project.optional-dependencies]
 parallel = [
     "mpi4py~=3.0",
+]
+neuron = [
+    "nrn-patch>=4.0.0b0"
+]
+arbor = [
+    "arbor>=0.6"
 ]
 docs = [
     "sphinx~=7.0",
