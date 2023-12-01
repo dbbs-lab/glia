@@ -1,9 +1,13 @@
-import os, sys, subprocess
+import os
+import subprocess
+import sys
 import weakref
-from importlib.metadata import entry_points
-from shutil import copy2 as copy_file, rmtree as rmdir
 from functools import wraps
-from ._hash import get_directory_hash
+from glob import glob
+from importlib.metadata import entry_points
+from shutil import copy2 as copy_file
+from shutil import rmtree as rmdir
+
 from ._fs import (
     create_cache,
     create_preferences,
@@ -14,15 +18,16 @@ from ._fs import (
     read_cache,
     update_cache,
 )
+from ._hash import get_directory_hash
+from .assets import Mod, Package
 from .exceptions import (
     CatalogueError,
-    LibraryError,
     CompileError,
+    LibraryError,
     NeuronError,
     PackageError,
 )
 from .resolution import Resolver
-from glob import glob
 
 _installed = None
 
@@ -86,8 +91,6 @@ class Glia:
         return self._catalogues
 
     def discover_packages(self):
-        from .assets import Package
-
         self._packages = []
         for pkg_ptr in entry_points().get("glia.package", []):
             advert = pkg_ptr.load()
@@ -430,8 +433,7 @@ class Glia:
         except ImportError:
             pass
         else:
-            from patch import is_point_process, is_density_mechanism
-            from .assets import Package, Mod
+            from patch import is_density_mechanism, is_point_process
 
             nrn_pkg = Package("NEURON", neuron.__path__[0], builtin=True)
             builtin_mechs = []

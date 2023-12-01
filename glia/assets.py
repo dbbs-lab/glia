@@ -1,11 +1,11 @@
 import os
+import shutil
+import subprocess
+from tempfile import mkdtemp
 
 from ._fs import get_cache_path, read_cache, update_cache
-from .exceptions import *
 from ._hash import get_directory_hash
-import subprocess
-import shutil
-from tempfile import mkdtemp
+from .exceptions import *
 
 
 class Package:

@@ -8,9 +8,9 @@ from contextlib import contextmanager
 
 from ._fs import read_preferences
 from .exceptions import (
+    NoMatchesError,
     ResolveError,
     TooManyMatchesError,
-    NoMatchesError,
     UnknownAssetError,
 )
 

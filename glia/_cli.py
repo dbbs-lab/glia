@@ -1,4 +1,6 @@
-import os, sys, argparse
+import argparse
+import sys
+
 from . import _manager
 from .exceptions import *
 

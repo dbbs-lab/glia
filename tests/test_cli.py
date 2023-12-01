@@ -1,7 +1,11 @@
-import unittest, os, sys, argparse
+import argparse
+import os
+import sys
+import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 import glia._cli
+
 
 # Duck punch the argument parser so it doesn't sys.exit
 def on_argparse_error(self, message):

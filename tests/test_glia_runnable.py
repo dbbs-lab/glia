@@ -1,4 +1,7 @@
-import unittest, os, sys, importlib
+import importlib
+import os
+import sys
+import unittest
 
 import glia._glia
 from glia._fs import get_neuron_mod_path, read_cache
@@ -34,6 +37,7 @@ class TestCompilation(unittest.TestCase):
 
     def test_compilation(self):
         from glob import glob
+
         import glia
 
         path = get_neuron_mod_path()
@@ -44,6 +48,7 @@ class TestCompilation(unittest.TestCase):
 
     def test_insert(self):
         from patch import p
+
         import glia as g
 
         # Test mechanism insertion
@@ -67,8 +72,9 @@ class TestCompilation(unittest.TestCase):
 
 class TestBuiltins(unittest.TestCase):
     def test_builtins(self):
-        import glia
         from patch import p
+
+        import glia
 
         s = p.Section()
         glia.insert(s, "pas")
