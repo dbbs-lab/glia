@@ -15,8 +15,10 @@ def run_cli_command(command):
     argv = sys.argv
     sys.argv = command.split(" ")
     sys.argv.insert(0, "test_cli_command")
-    result = glia._cli.glia_cli()
-    sys.argv = argv
+    try:
+        result = glia._cli.glia_cli()
+    finally:
+        sys.argv = argv
     return result
 
 

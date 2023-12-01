@@ -1,11 +1,11 @@
 import os
+
+from ._fs import get_cache_path, read_cache, update_cache
 from .exceptions import *
-from packaging import version
-from ._glia import Glia
 from ._hash import get_directory_hash
 import subprocess
 import shutil
-from tempfile import mkdtemp, TemporaryDirectory
+from tempfile import mkdtemp
 
 
 class Package:
@@ -25,19 +25,6 @@ class Package:
         except Exception as e:
             raise PackageError(
                 "Could not retrieve glia package from advertised object " + str(advert)
-            )
-        min_astro = manager.get_minimum_astro_version()
-        if not hasattr(pkg, "astro_version"):
-            raise PackageVersionError(
-                "Ancient Glia package '{}' too old. Minimum astro v{} required.".format(
-                    pkg.name, min_astro
-                )
-            )
-        elif version.parse(min_astro) > version.parse(pkg.astro_version):
-            raise PackageVersionError(
-                "Glia package too old. v{}, minimum v{} required.".format(
-                    pkg.astro_version, min_astro
-                )
             )
         try:
             p = cls(pkg.name, pkg.path)
@@ -73,6 +60,7 @@ class Mod:
         self.asset_name = name
         self.variant = variant
         self.is_point_process = is_point_process
+        self.is_artificial_cell = is_artificial_cell
         self.builtin = builtin
 
     @classmethod
@@ -128,7 +116,7 @@ class Catalogue:
     def __init__(self, name, source_file):
         self._name = name
         self._source = os.path.dirname(source_file)
-        self._cache = Glia.get_cache_path(self._name, for_arbor=True)
+        self._cache = get_cache_path(self._name, prefix="_arb")
 
     @property
     def name(self):
@@ -152,7 +140,7 @@ class Catalogue:
         if not os.path.exists(self._get_library_path()):
             return False
         try:
-            cache_data = Glia.read_cache()
+            cache_data = read_cache()
             # Backward compatibility with old installs that
             # have a JSON file without cat_hashes in it.
             cached = cache_data.get("cat_hashes", dict()).get(self._name, None)
@@ -247,7 +235,7 @@ class Catalogue:
             if debug:
                 print(f"Debug copy of catalogue in '{tmp}'")
         # Cache directory hash of current mod files so we only rebuild on source code changes.
-        cache_data = Glia.read_cache()
+        cache_data = read_cache()
         cat_hashes = cache_data.setdefault("cat_hashes", dict())
         cat_hashes[self._name] = self._hash()
-        Glia.update_cache(cache_data)
+        update_cache(cache_data)

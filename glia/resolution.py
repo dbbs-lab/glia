@@ -5,6 +5,8 @@
 
 
 from contextlib import contextmanager
+
+from ._fs import read_preferences
 from .exceptions import (
     ResolveError,
     TooManyMatchesError,
@@ -38,7 +40,7 @@ class _NoPreferenceError(Exception):
 class Resolver:
     def __init__(self, manager):
         self._manager = manager
-        self.global_preferences = self._manager.read_preferences()
+        self.global_preferences = read_preferences()
         self.local_preferences = {}
         self.__preference_stack = {}
         self.__next_stack_id = 0

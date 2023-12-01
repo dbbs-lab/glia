@@ -1,5 +1,8 @@
 import unittest, os, sys, importlib
 
+import glia._glia
+from glia._fs import get_neuron_mod_path, read_cache
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 
@@ -14,9 +17,7 @@ class TestPackageDiscovery(unittest.TestCase):
         self.assertGreater(len(glia._manager.packages), 0)
 
     def test_caching(self):
-        import glia
-
-        cache = glia._manager.read_cache()
+        cache = read_cache()
         # Check whether the directory hash for `glia_test_mods` is present.
         self.assertTrue(
             any(["glia_test_mods" in hash for hash in cache["mod_hashes"].keys()])
@@ -35,7 +36,7 @@ class TestCompilation(unittest.TestCase):
         from glob import glob
         import glia
 
-        path = glia._manager.get_neuron_mod_path()
+        path = get_neuron_mod_path()
         # Check that with `glia_test_mods` installed there are 3 mechanism folders
         self.assertEqual(len(glob(os.path.join(path, "*/"))), 3)
         # Check that all 3 libraries are picked up by `get_libraries`
@@ -43,11 +44,10 @@ class TestCompilation(unittest.TestCase):
 
     def test_insert(self):
         from patch import p
-        import patch.objects
         import glia as g
 
         # Test mechanism insertion
-        self.assertEqual(type(g.insert(p.Section(), "cdp5")), patch.objects.Section)
+        self.assertEqual(type(g.insert(p.Section(), "cdp5")), glia._glia.MechAccessor)
         self.assertTrue(g._manager.test_mechanism("cdp5"))
         self.assertTrue(g._manager.test_mechanism("Kir2_3"))
 
@@ -72,7 +72,6 @@ class TestBuiltins(unittest.TestCase):
 
         s = p.Section()
         glia.insert(s, "pas")
-        nrn_pkg = None
         for pkg in glia._manager.packages:
             if pkg.name == "NEURON":
                 nrn_pkg = pkg
@@ -80,7 +79,23 @@ class TestBuiltins(unittest.TestCase):
         else:
             self.fail("NEURON builtin package not found.")
         self.assertEqual(
-            [m.asset_name for m in pkg.mods],
-            ["extracellular", "fastpas", "hh", "k_ion", "na_ion", "pas"],
+            [m.asset_name for m in nrn_pkg.mods],
+            [
+                "APCount",
+                "AlphaSynapse",
+                "Exp2Syn",
+                "ExpSyn",
+                "IClamp",
+                "OClamp",
+                "PointProcessMark",
+                "SEClamp",
+                "VClamp",
+                "extracellular",
+                "fastpas",
+                "hh",
+                "k_ion",
+                "na_ion",
+                "pas",
+            ],
             "NEURON builtins incorrect",
         )
