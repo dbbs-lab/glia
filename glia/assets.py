@@ -1,12 +1,16 @@
 import os
 import shutil
 import subprocess
+import typing
 from tempfile import TemporaryDirectory, mkdtemp
 
 from . import _mpi
 from ._fs import get_cache_path, read_cache, update_cache
 from ._hash import get_directory_hash
 from .exceptions import *
+
+if typing.TYPE_CHECKING:
+    import arbor
 
 
 class Package:
@@ -127,7 +131,7 @@ class Catalogue:
     def source(self):
         return self._source
 
-    def load(self):
+    def load(self) -> "arbor.catalogue":
         import arbor
 
         if not self.is_fresh():
