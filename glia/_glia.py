@@ -1,21 +1,35 @@
-import os, sys, json, subprocess
+import os
+import subprocess
+import sys
+import warnings
 import weakref
-from importlib.metadata import entry_points
-from shutil import copy2 as copy_file, rmtree as rmdir
 from functools import wraps
-from ._hash import get_directory_hash, hash_path
+from importlib.metadata import entry_points
+from shutil import copy2 as copy_file
+from shutil import rmtree as rmdir
+
+from . import _mpi
+from ._fs import (
+    create_cache,
+    create_preferences,
+    get_cache_path,
+    get_data_path,
+    get_mod_path,
+    get_neuron_mod_path,
+    read_cache,
+    update_cache,
+)
+from ._hash import get_directory_hash
+from .assets import Mod, Package
 from .exceptions import (
     CatalogueError,
-    LibraryError,
     CompileError,
+    LibraryError,
     NeuronError,
     PackageError,
 )
 from .resolution import Resolver
-import appdirs
-from glob import glob
 
-_install_dirs = appdirs.AppDirs(appname="Glia", appauthor="DBBS")
 _installed = None
 
 
@@ -78,11 +92,12 @@ class Glia:
         return self._catalogues
 
     def discover_packages(self):
-        from .assets import Package
-
         self._packages = []
+        print("AND?")
         for pkg_ptr in entry_points().get("glia.package", []):
+            print("AND2?", pkg_ptr)
             advert = pkg_ptr.load()
+            print("stuck??")
             self.entry_points.append(advert)
             self._packages.append(Package.from_remote(self, advert))
 
@@ -115,36 +130,8 @@ class Glia:
     def build_catalogue(self, name, debug=False, verbose=False, gpu=None):
         return self._get_catalogue(name).build(verbose=verbose, debug=debug, gpu=gpu)
 
-    @staticmethod
-    def get_glia_path():
-        from . import __path__
-
-        return __path__[0]
-
-    @staticmethod
-    def get_cache_hash(for_arbor=False):
-        cache_slug = hash_path(Glia.get_glia_path())[:8]
-        if for_arbor:
-            cache_slug = "arb_" + cache_slug
-        return cache_slug
-
-    @staticmethod
-    def get_cache_path(*subfolders, for_arbor=False):
-        return os.path.join(
-            _install_dirs.user_cache_dir,
-            Glia.get_cache_hash(for_arbor=for_arbor),
-            *subfolders,
-        )
-
-    @staticmethod
-    def get_data_path(*subfolders):
-        return os.path.join(_install_dirs.user_data_dir, *subfolders)
-
-    def start(self, load_dll=True):
+    def start(self):
         self.compile(check_cache=True)
-
-    def get_minimum_astro_version(self):
-        return "0.0.3"
 
     @_requires_install
     def package(self, name):
@@ -172,60 +159,42 @@ class Glia:
         """
         self._compiled = True
         if not check_cache or not self.is_cache_fresh():
-            self._compile()
+            if _mpi.main_node:
+                self._compile()
+            _mpi.barrier()
 
     @_requires_install
     def _compile(self):
         assets, mod_files, cache_data = self._collect_asset_state()
         if _should_skip_compile():
-            return self.update_cache(cache_data)
+            return update_cache(cache_data)
         if len(mod_files) == 0:
             return
-        for i in self._distribute_n(len(mod_files)):
-            self._compile_nrn_mod(assets[i], mod_files[i])
-        # Update the cache with the new mod directory hashes.
-        self.update_cache(cache_data)
-
-    def _compile_nrn_mod(self, asset, file):
-        mod_path = self.get_neuron_mod_path(asset[1].mod_name)
-        os.makedirs(mod_path, exist_ok=True)
-        # Clean out previous files inside of the mod path
-        _remove_tree(mod_path)
-        # Copy over the mod file
-        copy_file(file, mod_path)
+        neuron_mod_path = get_neuron_mod_path()
+        _remove_tree(neuron_mod_path)
+        # Copy over fresh mods
+        for file in mod_files:
+            copy_file(file, neuron_mod_path)
         # Platform specific compile
         if sys.platform == "win32":
-            self._compile_nrn_windows(mod_path)
+            self._compile_nrn_windows(neuron_mod_path)
         elif sys.platform in ("linux", "darwin"):
-            self._compile_nrn_linux(mod_path)
+            self._compile_nrn_linux(neuron_mod_path)
         else:
             raise NotImplementedError(
-                "Only linux, darwin and win32 are supported. You are using "
-                + sys.platform
+                "Only linux and win32 are supported. You are using " + sys.platform
             )
-
-    def _distribute_n(self, n):
-        try:
-            from mpi4py.MPI import COMM_WORLD
-        except ImportError:
-            return range(0, n)
-        else:
-            r = COMM_WORLD.Get_rank()
-            s = COMM_WORLD.Get_size()
-            return range(r, n, s)
+        # Update the cache with the new mod directory hashes.
+        update_cache(cache_data)
 
     def _compile_nrn_windows(self, neuron_mod_path):
         # Compile the glia cache for Linux.
-        # Swap the python process's current working directory to the glia mod directory
-        # and run mknrndll.sh in mingw. This approach works even when the PATH isn't set
-        # properly by the installer.
+        # Runs %NEURONHOME%/nrnivmodl.bat
         from patch import p
 
-        nrn_path = p.neuronhome()
-        current_dir = os.getcwd()
-        os.chdir(neuron_mod_path)
         process = subprocess.Popen(
-            [os.path.join(nrn_path, "bin", "nrnivmodl.bat")],
+            [os.path.join(p.neuronhome(), "bin", "nrnivmodl.bat")],
+            cwd=neuron_mod_path,
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -233,18 +202,15 @@ class Glia:
 
         stdout, stderr = process.communicate(input=b"\n")
         self._compilation_failed = process.returncode != 0
-        os.chdir(current_dir)
         if process.returncode != 0:
             raise CompileError(stderr.decode("UTF-8"))
 
     def _compile_nrn_linux(self, neuron_mod_path):
         # Compile the glia cache for Linux.
-        # Swap the python process's current working directory to the glia mod directory
-        # and run nrnivmodl.
-        current_dir = os.getcwd()
-        os.chdir(neuron_mod_path)
+        # Runs nrnivmodl.
         process = subprocess.Popen(
             ["nrnivmodl"],
+            cwd=neuron_mod_path,
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -252,19 +218,18 @@ class Glia:
 
         stdout, stderr = process.communicate()
         self._compiled = process.returncode == 0
-        os.chdir(current_dir)
         if process.returncode != 0:
             raise CompileError(stderr.decode("UTF-8"))
 
     def _collect_asset_state(self):
-        cache_data = Glia.read_cache()
+        cache_data = read_cache()
         mod_files = []
         assets = []
         # Iterate over all discovered packages to collect the mod files.
         for pkg in self.packages:
             if pkg.builtin:
                 continue
-            mod_path = self.get_mod_path(pkg)
+            mod_path = get_mod_path(pkg)
             for mod in pkg.mods:
                 assets.append((pkg, mod))
                 mod_file = mod.mod_path
@@ -272,31 +237,6 @@ class Glia:
             # Hash mod directories and their contents to update the cache data.
             cache_data["mod_hashes"][pkg.path] = get_directory_hash(mod_path)
         return assets, mod_files, cache_data
-
-    def install(self, command):
-        """
-        Install a package from the Glia package index.
-
-        :param command: Command string to be passed to pip install, including name of the package(s) to install.
-        :type command: string.
-        """
-        subprocess.call(
-            [
-                sys.executable,
-                "-m",
-                "pip",
-                "install",
-                command,
-            ]
-        )
-
-    def uninstall(self, command):
-        """
-        Uninstall a Glia package.
-        :param command: Command string to be passed to pip uninstall, including name of the package(s) to uninstall.
-        :type command: string.
-        """
-        subprocess.call([sys.executable, "-m", "pip", "uninstall", command])
 
     @_requires_library
     def test_mechanism(self, mechanism):
@@ -337,11 +277,9 @@ class Glia:
         :type x: float
         :raises: LibraryError if the asset isn't found or was incorrectly marked as a point process.
         """
-        # Transform the given section into a NEURON section.
-        nrn_section = _transform(section)
         if attributes is None:
             attributes = {}
-        if asset.startswith("glia"):
+        if asset.startswith("glia__"):
             mod_name = asset
         else:
             mod_name = self.resolver.resolve(asset, pkg=pkg, variant=variant)
@@ -429,19 +367,18 @@ class Glia:
 
     def get_libraries(self):
         """
-        Return the locations of the library paths (dll/so) to be loaded into NEURON. Or
-        perhaps for use in dark neuroscientific rituals, who knows.
+        Return the locations of the library paths (dll/so) to be loaded into NEURON.
         """
         if sys.platform == "win32":
             path = ["nrnmech.dll"]
         else:
             path = ["x86_64", ".libs", "libnrnmech.so"]
 
-        return [os.path.join(folder, *path) for folder in glob(Glia.get_cache_path("*/"))]
+        return [get_neuron_mod_path(*path)]
 
     def is_cache_fresh(self):
         try:
-            cache_data = Glia.read_cache()
+            cache_data = read_cache()
             hashes = cache_data["mod_hashes"]
             for pkg in self.packages:
                 if pkg.path not in hashes:
@@ -457,16 +394,14 @@ class Glia:
         global _installed
         if _installed:
             return _installed
-        _installed = os.path.exists(Glia.get_data_path()) and os.path.exists(
-            Glia.get_cache_path()
-        )
+        _installed = os.path.exists(get_data_path()) and os.path.exists(get_cache_path())
         return _installed
 
     def _install_self(self):
-        os.makedirs(Glia.get_data_path(), exist_ok=True)
-        Glia.create_cache()
-        Glia.create_preferences()
-        os.makedirs(Glia.get_cache_path(), exist_ok=True)
+        os.makedirs(get_data_path(), exist_ok=True)
+        create_cache()
+        create_preferences()
+        os.makedirs(get_cache_path(), exist_ok=True)
         self._resolver = Resolver(self)
         self.compile()
 
@@ -477,8 +412,8 @@ class Glia:
         except ImportError:
             pass
         else:
-            from patch import is_point_process, is_density_mechanism
-            from .assets import Package, Mod
+            import patch
+            from patch import is_density_mechanism, is_point_process
 
             nrn_pkg = Package("NEURON", neuron.__path__[0], builtin=True)
             builtin_mechs = []
@@ -495,77 +430,6 @@ class Glia:
             self.packages.append(nrn_pkg)
             if self.resolver:
                 self.resolver.construct_index()
-
-    def get_mod_path(self, pkg):
-        return os.path.abspath(os.path.join(pkg.path, "mod"))
-
-    def get_neuron_mod_path(self, *paths):
-        return Glia.get_cache_path(*paths)
-
-    @staticmethod
-    def _read_shared_storage(*path):
-        _path = Glia.get_data_path(*path)
-        try:
-            with open(_path, "r") as f:
-                return json.load(f)
-        except IOError:
-            return {}
-
-    @staticmethod
-    def _write_shared_storage(data, *path):
-        _path = Glia.get_data_path(*path)
-        with open(_path, "w") as f:
-            f.write(json.dumps(data))
-
-    @staticmethod
-    def read_storage(*path):
-        data = Glia._read_shared_storage(*path)
-        glia_path = Glia.get_glia_path()
-        if glia_path not in data:
-            return {}
-        return data[glia_path]
-
-    @staticmethod
-    def write_storage(data, *path):
-        _path = Glia.get_data_path(*path)
-        glia_path = Glia.get_glia_path()
-        shared_data = Glia._read_shared_storage(*path)
-        shared_data[glia_path] = data
-        Glia._write_shared_storage(shared_data, *path)
-
-    @staticmethod
-    def read_cache():
-        cache = Glia.read_storage("cache.json")
-        if "mod_hashes" not in cache:
-            cache["mod_hashes"] = {}
-        return cache
-
-    @staticmethod
-    def write_cache(cache_data):
-        Glia.write_storage(cache_data, "cache.json")
-
-    @staticmethod
-    def update_cache(cache_data):
-        cache = Glia.read_cache()
-        cache.update(cache_data)
-        Glia.write_cache(cache)
-
-    @staticmethod
-    def create_cache():
-        empty_cache = {"mod_hashes": {}, "cat_hashes": {}}
-        Glia.write_cache(empty_cache)
-
-    @staticmethod
-    def read_preferences():
-        return Glia.read_storage("preferences.json")
-
-    @staticmethod
-    def write_preferences(preferences):
-        Glia.write_storage(preferences, "preferences.json")
-
-    @staticmethod
-    def create_preferences():
-        Glia.write_storage({}, "preferences.json")
 
     @_requires_install
     def list_assets(self):
@@ -593,7 +457,6 @@ def _transform(obj):
 
 
 def _remove_tree(path):
-    # Clear compiled mods
     for root, dirs, files in os.walk(path):
         for dir in dirs:
             try:
@@ -604,7 +467,7 @@ def _remove_tree(path):
             try:
                 os.remove(os.path.join(path, file))
             except PermissionError as _:
-                print("Couldn't remove", file)
+                warnings.warn(f"Couldn't remove {file}")
 
 
 class MechAccessor:

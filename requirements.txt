@@ -1,11 +1,10 @@
 nrn-patch==4.0.0a4
-requests>=2.22.0
+requests>=2.31.0
 errr==1.2.0
-NEURON==8.0.0
-arbor==0.6
+mpi4py==3.1.5
+appdirs==1.4.4
+NEURON==8.2.3
+arbor==0.9
 # Test requirements
 coverage==5.4
 glia_test_mods==0.0.3
-# Packaging requirements
-setuptools>=40.0.0
-packaging>=19.0

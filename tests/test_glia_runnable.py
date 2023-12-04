@@ -1,22 +1,25 @@
-import unittest, os, sys, importlib
+import importlib.util
+import os
+import unittest
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+import glia._glia
+from glia._fs import read_cache
 
 
+@unittest.skipIf(
+    not importlib.util.find_spec("glia_test_mods"),
+    "Package discovery should be tested with the `glia_test_mods` package installed.",
+)
 class TestPackageDiscovery(unittest.TestCase):
     """
     Check if packages can be discovered.
     """
 
     def test_discovery(self):
-        import glia
-
         self.assertGreater(len(glia._manager.packages), 0)
 
     def test_caching(self):
-        import glia
-
-        cache = glia._manager.read_cache()
+        cache = read_cache()
         # Check whether the directory hash for `glia_test_mods` is present.
         self.assertTrue(
             any(["glia_test_mods" in hash for hash in cache["mod_hashes"].keys()])
@@ -32,22 +35,20 @@ class TestCompilation(unittest.TestCase):
         glia.compile()
 
     def test_compilation(self):
-        from glob import glob
         import glia
 
-        path = glia._manager.get_neuron_mod_path()
-        # Check that with `glia_test_mods` installed there are 3 mechanism folders
-        self.assertEqual(len(glob(os.path.join(path, "*/"))), 3)
-        # Check that all 3 libraries are picked up by `get_libraries`
-        self.assertEqual(len(glia._manager.get_libraries()), 3)
+        # Check that the library files exist
+        for path in glia._manager.get_libraries():
+            with self.subTest(path=path):
+                self.assertTrue(os.path.exists(path), "Missing library file")
 
     def test_insert(self):
         from patch import p
-        import patch.objects
+
         import glia as g
 
         # Test mechanism insertion
-        self.assertEqual(type(g.insert(p.Section(), "cdp5")), patch.objects.Section)
+        self.assertEqual(type(g.insert(p.Section(), "cdp5")), glia._glia.MechAccessor)
         self.assertTrue(g._manager.test_mechanism("cdp5"))
         self.assertTrue(g._manager.test_mechanism("Kir2_3"))
 
@@ -67,12 +68,12 @@ class TestCompilation(unittest.TestCase):
 
 class TestBuiltins(unittest.TestCase):
     def test_builtins(self):
-        import glia
         from patch import p
+
+        import glia
 
         s = p.Section()
         glia.insert(s, "pas")
-        nrn_pkg = None
         for pkg in glia._manager.packages:
             if pkg.name == "NEURON":
                 nrn_pkg = pkg
@@ -80,7 +81,23 @@ class TestBuiltins(unittest.TestCase):
         else:
             self.fail("NEURON builtin package not found.")
         self.assertEqual(
-            [m.asset_name for m in pkg.mods],
-            ["extracellular", "fastpas", "hh", "k_ion", "na_ion", "pas"],
+            [m.asset_name for m in nrn_pkg.mods],
+            [
+                "APCount",
+                "AlphaSynapse",
+                "Exp2Syn",
+                "ExpSyn",
+                "IClamp",
+                "OClamp",
+                "PointProcessMark",
+                "SEClamp",
+                "VClamp",
+                "extracellular",
+                "fastpas",
+                "hh",
+                "k_ion",
+                "na_ion",
+                "pas",
+            ],
             "NEURON builtins incorrect",
         )

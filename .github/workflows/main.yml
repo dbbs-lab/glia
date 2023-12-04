@@ -8,8 +8,13 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        py: [3.8, 3.9]
-        nrn: [7.8.2, 8.0.0]
+        py: ["3.9", "3.10"]
+        nrn: ["8.1.0", "8.2.3"]
+        include:
+          - py: "3.9"
+            nrn: "8.0.2"
+          - py: "3.11"
+            nrn: "8.2.3"
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python ${{ matrix.py }}
@@ -31,7 +36,6 @@ jobs:
     - name: Install dependencies & self
       run: |
         python -m pip install --upgrade pip
-        pip install wheel
         pip install -r requirements.txt --prefer-binary
         pip install NEURON==${{ matrix.nrn }}
         pip install -e .
