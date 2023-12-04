@@ -93,11 +93,8 @@ class Glia:
 
     def discover_packages(self):
         self._packages = []
-        print("AND?")
         for pkg_ptr in entry_points().get("glia.package", []):
-            print("AND2?", pkg_ptr)
             advert = pkg_ptr.load()
-            print("stuck??")
             self.entry_points.append(advert)
             self._packages.append(Package.from_remote(self, advert))
 
