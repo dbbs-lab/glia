@@ -1,9 +1,9 @@
 import os
 import subprocess
 import sys
+import typing
 import warnings
-import weakref
-from functools import wraps
+from functools import lru_cache, wraps
 from importlib.metadata import entry_points
 from shutil import copy2 as copy_file
 from shutil import rmtree as rmdir
@@ -20,7 +20,7 @@ from ._fs import (
     update_cache,
 )
 from ._hash import get_directory_hash
-from .assets import Mod, Package
+from .assets import Catalogue, Mod, Package
 from .exceptions import (
     CatalogueError,
     CompileError,
@@ -70,8 +70,6 @@ class Glia:
         self._compiled = False
         self._loaded = False
         self.entry_points = []
-        self._packages = None
-        self._catalogues = None
         self._resolver = None
 
     @property
@@ -81,38 +79,32 @@ class Glia:
         return self._resolver
 
     @property
-    def packages(self):
-        if self._packages is None:
-            self.discover_packages()
-        return self._packages
-
-    @property
-    def catalogues(self):
-        if self._catalogues is None:
-            self.discover_catalogues()
-        return self._catalogues
-
-    def discover_packages(self):
-        self._packages = []
+    @lru_cache(maxsize=1)
+    def packages(self) -> typing.List[Package]:
+        packages = []
         for pkg_ptr in entry_points().get("glia.package", []):
             advert = pkg_ptr.load()
             self.entry_points.append(advert)
-            self._packages.append(Package.from_remote(self, advert))
+            packages.append(Package.from_remote(self, advert))
+        return packages
 
-    def discover_catalogues(self):
-        self._catalogues = {}
+    @property
+    @lru_cache(maxsize=1)
+    def catalogues(self) -> typing.Mapping[str, Catalogue]:
+        catalogues = {}
         for pkg_ptr in entry_points().get("glia.catalogue", []):
             advert = pkg_ptr.load()
             self.entry_points.append(advert)
-            if advert.name in self._catalogues:
+            if advert.name in catalogues:
                 raise RuntimeError(
                     f"Duplicate installations of `{advert.name}` catalogue:"
-                    + f"\n{self._catalogues[advert.name].path}"
+                    + f"\n{catalogues[advert.name].path}"
                     + f"\n{advert.path}"
                 )
-            self._catalogues[advert.name] = advert
+            catalogues[advert.name] = advert
+        return catalogues
 
-    def _get_catalogue(self, name):
+    def _get_catalogue(self, name) -> Catalogue:
         try:
             cat = self.catalogues[name]
         except KeyError:
