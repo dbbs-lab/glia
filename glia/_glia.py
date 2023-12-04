@@ -33,6 +33,10 @@ from .resolution import Resolver
 
 _installed = None
 
+MechId = typing.Union[
+    str, typing.Tuple[str], typing.Tuple[str, str], typing.Tuple[str, str, str]
+]
+
 
 def _requires_install(func):
     @wraps(func)
@@ -228,6 +232,13 @@ class Glia:
             cache_data["mod_hashes"][pkg.path] = get_directory_hash(mod_path)
         return assets, mod_files, cache_data
 
+    def _resolve_mod(self, asset, variant=None, pkg=None):
+        if isinstance(asset, str) and asset.startswith("glia__"):
+            mod_name = asset
+        else:
+            mod_name = self.resolver.resolve(asset, pkg=pkg, variant=variant)
+        return self.resolver.lookup(mod_name)
+
     @_requires_library
     def test_mechanism(self, mechanism):
         """
@@ -249,7 +260,16 @@ class Glia:
         return True
 
     @_requires_library
-    def insert(self, section, asset, variant=None, pkg=None, /, attributes=None, x=None):
+    def insert(
+        self,
+        section,
+        asset: MechId,
+        variant: str = None,
+        pkg: str = None,
+        /,
+        attributes: typing.Mapping[str, typing.Any] = None,
+        x: float = None,
+    ) -> MechAccessor:
         """
         Insert a mechanism or point process into a Section.
 
@@ -269,39 +289,47 @@ class Glia:
         """
         if attributes is None:
             attributes = {}
-        if asset.startswith("glia__"):
-            mod_name = asset
-        else:
-            mod_name = self.resolver.resolve(asset, pkg=pkg, variant=variant)
-        mod = self.resolver.lookup(mod_name)
+        mod = self._resolve_mod(asset, variant, pkg)
         if mod.is_point_process:  # Insert point process
             x = x if x is not None else 0.5
             try:
                 # Create a point process
-                point_process = getattr(self.h, mod_name)(section(x))
+                point_process = getattr(self.h, mod.mod_name)(section(x))
             except AttributeError as e:
                 raise LibraryError(
-                    "'{}' point process not found ".format(mod_name)
+                    "'{}' point process not found ".format(mod.mod_name)
                 ) from None
             except TypeError as e:
                 if str(e).find("'dict_keys' object is not subscriptable") == -1:
                     raise
                 else:
                     raise LibraryError(
-                        f"'{mod_name}' is marked as a point process, but isn't a point "
-                        "process in the NEURON library"
+                        f"'{mod.mod_name}' is marked as a point process, but isn't a "
+                        "point process in the NEURON library"
                     ) from None
             ma = MechAccessor(section, mod, point_process)
         else:  # Insert mechanism
             try:
-                section.insert(mod_name)
+                section.insert(mod.mod_name)
             except ValueError as e:
                 if str(e).find("argument not a density mechanism name") != -1:
-                    raise LibraryError(f"'{mod_name}' mechanism not found") from None
+                    raise LibraryError(f"'{mod.mod_name}' mechanism not found") from None
             ma = MechAccessor(section, mod)
         if attributes is not None:
             ma.set(attributes)
         return ma
+
+    @_requires_install
+    def get(self, section, asset: MechId, variant=None, pkg=None):
+        """
+        Get a density mechanism descriptor for a certain asset on a section
+        """
+        mod = self._resolve_mod(asset, variant, pkg)
+        if mod.is_point_process:
+            raise RuntimeError(
+                "Can't access point processes from sections, keep the reference returned by `glia.insert`."
+            )
+        return MechAccessor(section, mod)
 
     @_requires_install
     def select(self, asset_name, glbl=False, pkg=None, variant=None):
@@ -366,7 +394,7 @@ class Glia:
 
         return [get_neuron_mod_path(*path)]
 
-    def is_cache_fresh(self):
+    def is_cache_fresh(self) -> bool:
         try:
             cache_data = read_cache()
             hashes = cache_data["mod_hashes"]
