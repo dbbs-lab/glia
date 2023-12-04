@@ -33,6 +33,11 @@ from .resolution import Resolver
 _installed = None
 
 
+class _EntryPointsPatch(dict):
+    def select(self, name):
+        return self.get(name, [])
+
+
 def _requires_install(func):
     @wraps(func)
     def wrapper(self, *args, **kwargs):
@@ -93,14 +98,20 @@ class Glia:
 
     def discover_packages(self):
         self._packages = []
-        for pkg_ptr in entry_points().get("glia.package", []):
+        eps = entry_points()
+        if not hasattr(eps, "select"):
+            eps = _EntryPointsPatch(eps)
+        for pkg_ptr in eps.select("glia.package"):
             advert = pkg_ptr.load()
             self.entry_points.append(advert)
             self._packages.append(Package.from_remote(self, advert))
 
     def discover_catalogues(self):
         self._catalogues = {}
-        for pkg_ptr in entry_points().get("glia.catalogue", []):
+        eps = entry_points()
+        if not hasattr(eps, "select"):
+            eps = _EntryPointsPatch(eps)
+        for pkg_ptr in eps.select("glia.catalogue"):
             advert = pkg_ptr.load()
             self.entry_points.append(advert)
             if advert.name in self._catalogues:
