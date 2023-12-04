@@ -73,9 +73,7 @@ def glia_cli():
 def compile(args):
     if _mpi.main_node:
         print("Glia is compiling...")
-    print("huh")
     _manager.compile()
-    print("huh2")
     if _mpi.main_node:
         print("Compilation complete!")
     assets, _, _ = _manager._collect_asset_state()
@@ -164,8 +162,8 @@ def _show_asset(asset):
         pref_mod = None
         try:
             pref_mod = _manager.resolver.resolve_preference(asset)
-        except ResolveError as _:
-            print("resolve error", _)
+        except ResolveError as e:
+            print("resolve error", e)
             pass
         pref_string = ""
         if "package" in preference:
