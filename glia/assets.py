@@ -14,10 +14,10 @@ if typing.TYPE_CHECKING:
 
 
 class Package:
-    def __init__(self, name, path, builtin=False):
+    def __init__(self, name, path, mods=None, builtin=False):
         self.name = name
         self.path = path
-        self.mods = []
+        self.mods = [] if mods is None else mods
         # Exceptional flag for the NEURON builtins.
         # They need a definition to be `insert`ed,
         # but have no mod files to be compiled.
