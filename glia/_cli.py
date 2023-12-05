@@ -1,12 +1,13 @@
 import argparse
 import sys
 
-from . import _manager, _mpi
+from . import __doc__, _manager, _mpi
 from .exceptions import *
+from .packaging._cli import add_packaging_cli
 
 
 def glia_cli():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser("glia", description=__doc__)
     subparsers = parser.add_subparsers()
 
     compile_parser = subparsers.add_parser(
@@ -61,6 +62,8 @@ def glia_cli():
     build_parser.add_argument("--gpu", action="store", help="Build with GPU support")
     build_parser.set_defaults(func=lambda args: _build_cat(args))
 
+    add_packaging_cli(subparsers)
+
     cl_args = parser.parse_args()
     if hasattr(cl_args, "func"):
         try:
@@ -68,6 +71,8 @@ def glia_cli():
         except GliaError as e:  # pragma: no cover
             print("GLIA ERROR", str(e))
             sys.exit(1)
+    else:
+        print("Nothing to do.")
 
 
 def compile(args):

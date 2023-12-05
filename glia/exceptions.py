@@ -16,6 +16,7 @@ _make_tree(
             UnknownAssetError=_e(),
         ),
         PackageError=_e(
+            PackageFileError=_e(),
             PackageModError=_e(),
             PackageVersionError=_e(),
         ),
@@ -33,6 +34,7 @@ TooManyMatchesError: Type[ResolveError]
 NoMatchesError: Type[ResolveError]
 UnknownAssetError: Type[ResolveError]
 PackageError: Type[GliaError]
+PackageFileError: Type[PackageError]
 PackageModError: Type[PackageError]
 PackageVersionError: Type[PackageError]
 CatalogueError: Type[GliaError]
