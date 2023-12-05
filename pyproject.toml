@@ -12,6 +12,7 @@ dynamic = ["version", "description"]
 dependencies= [
     "appdirs~=1.0",
     "errr>=1.2.0",
+    "cookiecutter~=2.0"
 ]
 
 [tool.flit.module]
