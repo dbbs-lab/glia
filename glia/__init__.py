@@ -1,14 +1,19 @@
 """
-NMODL Asset Manager.
+NMODL Asset Manager for Arbor and NEURON
+
+  ~ Glues your neurons together!
+
+Manage a local NMODL library that's automatically compiled, loaded, and recompiled
+whenever you change your NMODL code or simulator environment.
 """
 
 __version__ = "4.0.0b1"
 
 from ._glia import Glia, MechId
+from .assets import Catalogue, Mod, Package
 from .exceptions import *
 from .neuron import MechAccessor
 
-# Initialize the manager
 _manager = Glia()
 
 
