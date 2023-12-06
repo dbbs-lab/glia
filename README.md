@@ -26,9 +26,9 @@ allows you to organize your personal mod collection\!
 
 # Usage
 
-Glia can be installed from pip:
+Glia can be installed from PyPI:
 
-    pip install nrn-glia
+    pip install nmodl-glia
 
 Glia will check whether packages have been added, changed or removed and
 will recompile and load the library if necessary. This means that except
