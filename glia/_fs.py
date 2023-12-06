@@ -15,8 +15,7 @@ def get_glia_path():
 
 
 def get_cache_hash(prefix=""):
-    cache_slug = prefix + hash_path(get_glia_path())[:8]
-    return cache_slug
+    return prefix + hash_path(get_glia_path())[:8]
 
 
 def get_cache_path(*subfolders, prefix=""):

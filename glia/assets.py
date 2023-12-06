@@ -7,7 +7,7 @@ from tempfile import TemporaryDirectory, mkdtemp
 
 from . import _mpi
 from ._fs import get_cache_path, read_cache, update_cache
-from ._hash import get_directory_hash, get_package_hash
+from ._hash import get_directory_hash, get_package_hash, get_package_mods_hash
 from .exceptions import *
 
 if typing.TYPE_CHECKING:
@@ -25,13 +25,20 @@ class Package:
         # but have no mod files to be compiled.
         self.builtin = builtin
 
+    def __hash__(self):
+        return get_package_hash(self)
+
     @property
     def name(self):
         return self._name
 
     @property
     def hash(self):
-        return get_package_hash(self)
+        return get_package_mods_hash(self)
+
+    @property
+    def root(self):
+        return self._root
 
 
 class Mod:
