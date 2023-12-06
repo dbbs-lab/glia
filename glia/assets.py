@@ -2,11 +2,12 @@ import os
 import shutil
 import subprocess
 import typing
+from pathlib import Path
 from tempfile import TemporaryDirectory, mkdtemp
 
 from . import _mpi
 from ._fs import get_cache_path, read_cache, update_cache
-from ._hash import get_directory_hash
+from ._hash import get_directory_hash, get_package_hash
 from .exceptions import *
 
 if typing.TYPE_CHECKING:
@@ -14,10 +15,11 @@ if typing.TYPE_CHECKING:
 
 
 class Package:
-    def __init__(self, name, root, *, mods=None, builtin=False):
+    def __init__(self, name: str, root: Path, *, mods: list["Mod"] = None, builtin=False):
         self._name = name
-        self._root = root
-        self.mods = [] if mods is None else mods
+        self._root = Path(root)
+        self.path = None
+        self.mods: list["Mod"] = [] if mods is None else mods
         # Exceptional flag for the NEURON builtins.
         # They need a definition to be `insert`ed,
         # but have no mod files to be compiled.
@@ -26,6 +28,10 @@ class Package:
     @property
     def name(self):
         return self._name
+
+    @property
+    def hash(self):
+        return get_package_hash(self)
 
 
 class Mod:
