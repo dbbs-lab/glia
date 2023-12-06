@@ -5,11 +5,13 @@ import unittest
 import glia._glia
 from glia._fs import read_cache
 
-
-@unittest.skipIf(
+skipWithoutMods = unittest.skipIf(
     not importlib.util.find_spec("glia_test_mods"),
-    "Package discovery should be tested with the `glia_test_mods` package installed.",
+    "Test requires `glia_test_mods` package to be installed.",
 )
+
+
+@skipWithoutMods
 class TestPackageDiscovery(unittest.TestCase):
     """
     Check if packages can be discovered.
@@ -42,6 +44,7 @@ class TestCompilation(unittest.TestCase):
             with self.subTest(path=path):
                 self.assertTrue(os.path.exists(path), "Missing library file")
 
+    @skipWithoutMods
     def test_insert(self):
         from patch import p
 

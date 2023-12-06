@@ -30,10 +30,6 @@ def get_data_path(*subfolders):
     return os.path.join(_install_dirs.user_data_dir, *subfolders)
 
 
-def get_mod_path(pkg):
-    return os.path.abspath(os.path.join(pkg.path, "mod"))
-
-
 def get_neuron_mod_path(*paths):
     return get_cache_path(*paths)
 
@@ -43,7 +39,7 @@ def _read_shared_storage(*path):
     try:
         with open(_path, "r") as f:
             return json.load(f)
-    except IOError:
+    except (IOError, json.JSONDecodeError):
         return {}
 
 

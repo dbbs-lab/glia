@@ -15,8 +15,9 @@ class TestResolver(unittest.TestCase):
     """
 
     def test_resolve(self):
-        pkg = Package("test", __file__, False)
-        m = Mod(pkg, "hello", "test_v")
+        pkg = Package(
+            "test", __file__, mods=[m := Mod("./doesntexist", "hello", "test_v")]
+        )
         mname = m.mod_name
         pkg.mods = [m]
         resolver = Resolver(ManagerMock([pkg]))

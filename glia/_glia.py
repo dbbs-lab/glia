@@ -14,12 +14,10 @@ from ._fs import (
     create_preferences,
     get_cache_path,
     get_data_path,
-    get_mod_path,
     get_neuron_mod_path,
     read_cache,
     update_cache,
 )
-from ._hash import get_directory_hash
 from .assets import Catalogue, Mod, Package
 from .exceptions import (
     CatalogueError,
@@ -87,23 +85,22 @@ class Glia:
     def packages(self) -> typing.List[Package]:
         packages = []
         for pkg_ptr in entry_points().get("glia.package", []):
-            advert = pkg_ptr.load()
-            self.entry_points.append(advert)
-            packages.append(Package.from_remote(self, advert))
+            self.entry_points.append(pkg_ptr)
+            packages.append(pkg_ptr.load())
         return packages
 
     @property
     @lru_cache(maxsize=1)
     def catalogues(self) -> typing.Mapping[str, Catalogue]:
-        catalogues = {}
+        catalogues: typing.Mapping[str, Catalogue] = {}
         for pkg_ptr in entry_points().get("glia.catalogue", []):
             advert = pkg_ptr.load()
-            self.entry_points.append(advert)
+            self.entry_points.append(pkg_ptr)
             if advert.name in catalogues:
                 raise RuntimeError(
                     f"Duplicate installations of `{advert.name}` catalogue:"
-                    + f"\n{catalogues[advert.name].path}"
-                    + f"\n{advert.path}"
+                    + f"\n{catalogues[advert.name].FIXMEpath}"
+                    + f"\n{advert.FIXMEpath}"
                 )
             catalogues[advert.name] = advert
         return catalogues
@@ -159,16 +156,16 @@ class Glia:
 
     @_requires_install
     def _compile(self):
-        assets, mod_files, cache_data = self._collect_asset_state()
+        assets, cache_data = self._precompile_cache()
         if _should_skip_compile():
             return update_cache(cache_data)
-        if len(mod_files) == 0:
+        if len(assets) == 0:
             return
         neuron_mod_path = get_neuron_mod_path()
         _remove_tree(neuron_mod_path)
         # Copy over fresh mods
-        for file in mod_files:
-            copy_file(file, neuron_mod_path)
+        for asset in assets:
+            copy_file(asset.path, neuron_mod_path)
         # Platform specific compile
         if sys.platform == "win32":
             self._compile_nrn_windows(neuron_mod_path)
@@ -215,22 +212,17 @@ class Glia:
         if process.returncode != 0:
             raise CompileError(stderr.decode("UTF-8"))
 
-    def _collect_asset_state(self):
+    def _precompile_cache(self):
         cache_data = read_cache()
-        mod_files = []
         assets = []
         # Iterate over all discovered packages to collect the mod files.
         for pkg in self.packages:
             if pkg.builtin:
                 continue
-            mod_path = get_mod_path(pkg)
-            for mod in pkg.mods:
-                assets.append((pkg, mod))
-                mod_file = mod.mod_path
-                mod_files.append(mod_file)
-            # Hash mod directories and their contents to update the cache data.
-            cache_data["mod_hashes"][pkg.path] = get_directory_hash(mod_path)
-        return assets, mod_files, cache_data
+            assets.extend(pkg.mods)
+            # Update the package's hash to the current modfile contents
+            cache_data["mod_hashes"][pkg.hash] = pkg.mod_hash
+        return assets, cache_data
 
     def _resolve_mod(self, asset, variant=None, pkg=None):
         if isinstance(asset, str) and asset.startswith("glia__"):
@@ -397,12 +389,11 @@ class Glia:
     def is_cache_fresh(self) -> bool:
         try:
             cache_data = read_cache()
-            hashes = cache_data["mod_hashes"]
+            mod_hashes = cache_data["mod_hashes"]
             for pkg in self.packages:
-                if pkg.path not in hashes:
+                if pkg.hash not in mod_hashes:
                     return False
-                hash = get_directory_hash(os.path.join(pkg.path, "mod"))
-                if hash != hashes[pkg.path]:
+                if pkg.mod_hash != mod_hashes[pkg.hash]:
                     return False
             return True
         except FileNotFoundError as _:

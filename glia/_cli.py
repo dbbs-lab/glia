@@ -81,22 +81,12 @@ def compile(args):
     _manager.compile()
     if _mpi.main_node:
         print("Compilation complete!")
-    assets, _, _ = _manager._collect_asset_state()
+    assets, _ = _manager._precompile_cache()
     if _mpi.main_node:
         print(
             "Compiled assets:",
             ", ".join(
-                list(
-                    set(
-                        map(
-                            lambda a: a[0].name
-                            + "."
-                            + a[1].asset_name
-                            + "({})".format(a[1].variant),
-                            assets,
-                        )
-                    )
-                )
+                set(f"{mod.pkg.name}.{mod.asset_name}({mod.variant})" for mod in assets)
             ),
         )
         print("Testing assets ...")
@@ -194,12 +184,11 @@ def _show_pkg(pkg_name):
             pstr = "Package: " + _colors.OKGREEN + candidate.name + _colors.ENDC
         print(pstr)
         print("=" * len(pstr))
-        print("Path: " + candidate.path)
-        print("Module path: " + candidate.mod_path)
+        print("Location: " + candidate.root)
         print()
         print("Available modules:")
         for mod in candidate.mods:
-            print("  *", mod.mod_name)
+            print("  *", mod.mod_name, "=", mod.path)
         print()
 
 

@@ -14,19 +14,38 @@ if typing.TYPE_CHECKING:
     import arbor
 
 
+class _ModList(list):
+    def __init__(self, package: "Package", *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.pkg = package
+        for item in self:
+            if not isinstance(item, Mod):
+                raise PackageFileError(f"Package mod '{item}' is not a valid `glia.Mod`.")
+            item.set_package(package)
+
+    def __setitem__(self, key, value):
+        if not isinstance(value, Mod):
+            raise PackageFileError(f"Package mod '{value}' is not a valid `glia.Mod`.")
+        super().__setitem__(key, value)
+        value.set_package(self.pkg)
+
+    def append(self, item):
+        item.set_package(self.pkg)
+        super().append(item)
+
+    def extend(self, itr):
+        super().extend(i.set_package(self.pkg) or i for i in itr)
+
+
 class Package:
     def __init__(self, name: str, root: Path, *, mods: list["Mod"] = None, builtin=False):
         self._name = name
         self._root = Path(root)
-        self.path = None
-        self.mods: list["Mod"] = [] if mods is None else mods
+        self.mods: list["Mod"] = _ModList(self, [] if mods is None else mods)
         # Exceptional flag for the NEURON builtins.
         # They need a definition to be `insert`ed,
         # but have no mod files to be compiled.
         self.builtin = builtin
-
-    def __hash__(self):
-        return get_package_hash(self)
 
     @property
     def name(self):
@@ -34,6 +53,10 @@ class Package:
 
     @property
     def hash(self):
+        return get_package_hash(self)
+
+    @property
+    def mod_hash(self):
         return get_package_mods_hash(self)
 
     @property
@@ -83,7 +106,7 @@ class Mod:
         return f"glia__{self.asset_name}__{self.variant}"
 
     @property
-    def mod_path(self):
+    def path(self):
         return self.pkg.root / self._relpath
 
 

@@ -46,11 +46,11 @@ def get_package_mods_hash(package: "Package"):
             raise FileNotFoundError(
                 f"Modfile {package.name}.{mod.mech_id} not found at '{mod.path}'"
             )
-        hash_update_from_file(mod.mod_path, h)
+        hash_update_from_file(mod.path, h)
     return h.hexdigest()
 
 
 def get_package_hash(package: "Package"):
     h = hashlib.md5()
-    h.update(package.root)
+    h.update(bytes(package.root))
     return h.hexdigest()
