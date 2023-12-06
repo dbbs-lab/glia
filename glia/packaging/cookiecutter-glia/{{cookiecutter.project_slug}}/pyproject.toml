@@ -12,3 +12,6 @@ dependencies = ["{{cookiecutter._glia.specifier}}"]
 
 [project.entry-points."glia.package"]
 "{{cookiecutter.project_slug}}" = "{{cookiecutter.project_slug}}:package"
+
+[tool.glia.package]
+mod-dir = "mods"

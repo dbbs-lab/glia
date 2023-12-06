@@ -11,10 +11,10 @@ classifiers = ["License :: OSI Approved :: GNU General Public License v3 or late
 dynamic = ["version", "description"]
 dependencies= [
     "appdirs~=1.0",
-    "errr>=1.2.0",
+    "errr~=1.2",
     "cookiecutter~=2.0",
     "toml~=0.10",
-    "black~=23.0"
+    "black>=23.0.0"
 ]
 
 [tool.flit.module]
