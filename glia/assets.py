@@ -14,42 +14,18 @@ if typing.TYPE_CHECKING:
 
 
 class Package:
-    def __init__(self, name, *, mods=None, builtin=False):
-        self.name = name
+    def __init__(self, name, root, *, mods=None, builtin=False):
+        self._name = name
+        self._root = root
         self.mods = [] if mods is None else mods
         # Exceptional flag for the NEURON builtins.
         # They need a definition to be `insert`ed,
         # but have no mod files to be compiled.
         self.builtin = builtin
-        self._advert = None
-
-    def set_advert(self, advert):
-        self._advert = advert
-
-    @classmethod
-    def from_remote(cls, manager, advert):
-        try:
-            pkg = advert.package()
-        except Exception as e:
-            raise PackageError(
-                "Could not retrieve glia package from advertised object " + str(advert)
-            )
-        try:
-            p = cls(pkg.name, pkg.path)
-            p._load_remote_mods(pkg)
-        except AttributeError as e:
-            raise PackageError(
-                "Package '{}' is missing attributes:".format(advert.__name__)
-            )
-        return p
-
-    def _load_remote_mods(self, remote_pkg):
-        for mod in remote_pkg.mods:
-            self.mods.append(Mod.from_remote(self, mod))
 
     @property
-    def mod_path(self):
-        return os.path.abspath(os.path.join(self.path, "mod"))
+    def name(self):
+        return self._name
 
 
 class Mod:
@@ -91,7 +67,7 @@ class Mod:
             )
             try:
                 kwargs[local_attr] = remote_object.__dict__[remote_attr]
-            except KeyError as e:
+            except KeyError:
                 e_str = "A mod"
                 if "name" in kwargs:
                     e_str = kwargs["name"]
@@ -169,7 +145,10 @@ class Catalogue:
     def build(self, verbose=None, debug=False, gpu=None):
         # Turn verbosity on if debug is on, unless it's explicitly toggled off.
         verbose = False if verbose is False else verbose or debug
-        run_build = lambda: self._build_local(verbose, debug, gpu)
+
+        def run_build():
+            self._build_local(verbose, debug, gpu)
+
         build_err = None
         try:
             if _mpi.main_node:
@@ -232,7 +211,8 @@ class Catalogue:
             os.chdir(pwd)
             if debug:
                 print(f"Debug copy of catalogue in '{tmp}'")
-        # Cache directory hash of current mod files so we only rebuild on source code changes.
+        # Cache directory hash of current mod files so we only rebuild on source code
+        # changes.
         cache_data = read_cache()
         cat_hashes = cache_data.setdefault("cat_hashes", dict())
         cat_hashes[self._name] = self._hash()
