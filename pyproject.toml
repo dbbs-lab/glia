@@ -3,7 +3,7 @@ requires = ["flit_core >=3.2,<4"]
 build-backend = "flit_core.buildapi"
 
 [project]
-name = "nrn-glia"
+name = "nmodl-glia"
 authors = [{name = "Robin De Schepper", email = "robingilbert.deschepper@unipv.it"}]
 readme = "README.md"
 license = {file = "LICENSE"}
@@ -12,7 +12,9 @@ dynamic = ["version", "description"]
 dependencies= [
     "appdirs~=1.0",
     "errr>=1.2.0",
-    "cookiecutter~=2.0"
+    "cookiecutter~=2.0",
+    "toml~=0.10",
+    "black~=23.0"
 ]
 
 [tool.flit.module]
