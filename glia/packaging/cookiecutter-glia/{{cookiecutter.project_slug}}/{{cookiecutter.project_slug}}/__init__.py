@@ -16,6 +16,6 @@ from glia import Package
 
 package = Package(
     "{{cookiecutter.project_slug}}",
-    Path(__file__).parent,
+    Path(__file__).resolve().parent,
     mods=[],
 )
