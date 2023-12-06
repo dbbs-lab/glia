@@ -8,6 +8,7 @@ authors = [{name = "{{cookiecutter.full_name}}", email = "{{cookiecutter.email}}
 readme = "README.rst"
 license = {file = "LICENSE"}
 dynamic = ["version", "description"]
+dependencies = ["{{cookiecutter._glia.specifier}}"]
 
 [project.entry-points."glia.package"]
 "{{cookiecutter.project_slug}}" = "{{cookiecutter.project_slug}}:package"
