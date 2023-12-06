@@ -76,7 +76,9 @@ Whenever you call ``glia.insert`` you can append your preferences for that inser
 
 .. code-block:: python
 
-   g.insert('Kv1', pkg='not_my_models', variant='high_activity')
+   g.insert('Kv1', variant='high_activity', pkg='not_my_models')
+   # Equivalent to (note the extra parenthesis):
+   g.insert(('Kv1', 'high_activity', 'not_my_models'))
 
 Context scope
 ~~~~~~~~~~~~~

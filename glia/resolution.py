@@ -6,7 +6,7 @@
 
 from contextlib import contextmanager
 
-from ._fs import read_preferences
+from ._fs import read_preferences, write_preferences
 from .exceptions import (
     NoMatchesError,
     ResolveError,
@@ -59,6 +59,13 @@ class Resolver:
                 self._reverse_lookup[mod.mod_name] = mod
 
     def resolve(self, asset_name, pkg=None, variant=None):
+        if isinstance(asset_name, tuple):
+            try:
+                variant = asset_name[1]
+                pkg = asset_name[2]
+            except IndexError:
+                pass
+            asset_name = asset_name[0]
         if not asset_name in self.index:
             raise UnknownAssetError(
                 "Selection could not be resolved: Asset '{}' not found.".format(
@@ -192,7 +199,7 @@ class Resolver:
             preference["variant"] = variant
         if glbl:
             self.global_preferences[asset_name] = preference
-            self._manager.write_preferences(self.global_preferences)
+            write_preferences(self.global_preferences)
         else:
             self.local_preferences[asset_name] = preference
 

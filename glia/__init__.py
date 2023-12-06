@@ -4,8 +4,9 @@ NMODL Asset Manager.
 
 __version__ = "4.0.0b1"
 
-from ._glia import Glia
+from ._glia import Glia, MechId
 from .exceptions import *
+from .neuron import MechAccessor
 
 # Initialize the manager
 _manager = Glia()

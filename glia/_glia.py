@@ -1,9 +1,9 @@
 import os
 import subprocess
 import sys
+import typing
 import warnings
-import weakref
-from functools import wraps
+from functools import lru_cache, wraps
 from importlib.metadata import entry_points
 from shutil import copy2 as copy_file
 from shutil import rmtree as rmdir
@@ -20,7 +20,7 @@ from ._fs import (
     update_cache,
 )
 from ._hash import get_directory_hash
-from .assets import Mod, Package
+from .assets import Catalogue, Mod, Package
 from .exceptions import (
     CatalogueError,
     CompileError,
@@ -28,9 +28,14 @@ from .exceptions import (
     NeuronError,
     PackageError,
 )
+from .neuron import MechAccessor
 from .resolution import Resolver
 
 _installed = None
+
+MechId = typing.Union[
+    str, typing.Tuple[str], typing.Tuple[str, str], typing.Tuple[str, str, str]
+]
 
 
 class _EntryPointsPatch(dict):
@@ -74,8 +79,6 @@ class Glia:
         self._compiled = False
         self._loaded = False
         self.entry_points = []
-        self._packages = None
-        self._catalogues = None
         self._resolver = None
 
     @property
@@ -85,44 +88,36 @@ class Glia:
         return self._resolver
 
     @property
-    def packages(self):
-        if self._packages is None:
-            self.discover_packages()
-        return self._packages
-
-    @property
-    def catalogues(self):
-        if self._catalogues is None:
-            self.discover_catalogues()
-        return self._catalogues
-
-    def discover_packages(self):
-        self._packages = []
+    @lru_cache(maxsize=1)
+    def packages(self) -> typing.List[Package]:
         eps = entry_points()
         if not hasattr(eps, "select"):
             eps = _EntryPointsPatch(eps)
         for pkg_ptr in eps.select("glia.package"):
             advert = pkg_ptr.load()
             self.entry_points.append(advert)
-            self._packages.append(Package.from_remote(self, advert))
+            packages.append(Package.from_remote(self, advert))
+        return packages
 
-    def discover_catalogues(self):
-        self._catalogues = {}
+    @property
+    @lru_cache(maxsize=1)
+    def catalogues(self) -> typing.Mapping[str, Catalogue]:
         eps = entry_points()
         if not hasattr(eps, "select"):
             eps = _EntryPointsPatch(eps)
         for pkg_ptr in eps.select("glia.catalogue"):
             advert = pkg_ptr.load()
             self.entry_points.append(advert)
-            if advert.name in self._catalogues:
+            if advert.name in catalogues:
                 raise RuntimeError(
                     f"Duplicate installations of `{advert.name}` catalogue:"
-                    + f"\n{self._catalogues[advert.name].path}"
+                    + f"\n{catalogues[advert.name].path}"
                     + f"\n{advert.path}"
                 )
-            self._catalogues[advert.name] = advert
+            catalogues[advert.name] = advert
+        return catalogues
 
-    def _get_catalogue(self, name):
+    def _get_catalogue(self, name) -> Catalogue:
         try:
             cat = self.catalogues[name]
         except KeyError:
@@ -246,6 +241,13 @@ class Glia:
             cache_data["mod_hashes"][pkg.path] = get_directory_hash(mod_path)
         return assets, mod_files, cache_data
 
+    def _resolve_mod(self, asset, variant=None, pkg=None):
+        if isinstance(asset, str) and asset.startswith("glia__"):
+            mod_name = asset
+        else:
+            mod_name = self.resolver.resolve(asset, pkg=pkg, variant=variant)
+        return self.resolver.lookup(mod_name)
+
     @_requires_library
     def test_mechanism(self, mechanism):
         """
@@ -267,7 +269,16 @@ class Glia:
         return True
 
     @_requires_library
-    def insert(self, section, asset, variant=None, pkg=None, /, attributes=None, x=None):
+    def insert(
+        self,
+        section,
+        asset: MechId,
+        variant: str = None,
+        pkg: str = None,
+        /,
+        attributes: typing.Mapping[str, typing.Any] = None,
+        x: float = None,
+    ) -> MechAccessor:
         """
         Insert a mechanism or point process into a Section.
 
@@ -287,39 +298,47 @@ class Glia:
         """
         if attributes is None:
             attributes = {}
-        if asset.startswith("glia__"):
-            mod_name = asset
-        else:
-            mod_name = self.resolver.resolve(asset, pkg=pkg, variant=variant)
-        mod = self.resolver.lookup(mod_name)
+        mod = self._resolve_mod(asset, variant, pkg)
         if mod.is_point_process:  # Insert point process
             x = x if x is not None else 0.5
             try:
                 # Create a point process
-                point_process = getattr(self.h, mod_name)(section(x))
+                point_process = getattr(self.h, mod.mod_name)(section(x))
             except AttributeError as e:
                 raise LibraryError(
-                    "'{}' point process not found ".format(mod_name)
+                    "'{}' point process not found ".format(mod.mod_name)
                 ) from None
             except TypeError as e:
                 if str(e).find("'dict_keys' object is not subscriptable") == -1:
                     raise
                 else:
                     raise LibraryError(
-                        f"'{mod_name}' is marked as a point process, but isn't a point "
-                        "process in the NEURON library"
+                        f"'{mod.mod_name}' is marked as a point process, but isn't a "
+                        "point process in the NEURON library"
                     ) from None
             ma = MechAccessor(section, mod, point_process)
         else:  # Insert mechanism
             try:
-                section.insert(mod_name)
+                section.insert(mod.mod_name)
             except ValueError as e:
                 if str(e).find("argument not a density mechanism name") != -1:
-                    raise LibraryError(f"'{mod_name}' mechanism not found") from None
+                    raise LibraryError(f"'{mod.mod_name}' mechanism not found") from None
             ma = MechAccessor(section, mod)
         if attributes is not None:
             ma.set(attributes)
         return ma
+
+    @_requires_install
+    def get(self, section, asset: MechId, variant=None, pkg=None):
+        """
+        Get a density mechanism descriptor for a certain asset on a section
+        """
+        mod = self._resolve_mod(asset, variant, pkg)
+        if mod.is_point_process:
+            raise RuntimeError(
+                "Can't access point processes from sections, keep the reference returned by `glia.insert`."
+            )
+        return MechAccessor(section, mod)
 
     @_requires_install
     def select(self, asset_name, glbl=False, pkg=None, variant=None):
@@ -384,7 +403,7 @@ class Glia:
 
         return [get_neuron_mod_path(*path)]
 
-    def is_cache_fresh(self):
+    def is_cache_fresh(self) -> bool:
         try:
             cache_data = read_cache()
             hashes = cache_data["mod_hashes"]
@@ -476,115 +495,3 @@ def _remove_tree(path):
                 os.remove(os.path.join(path, file))
             except PermissionError as _:
                 warnings.warn(f"Couldn't remove {file}")
-
-
-class MechAccessor:
-    def __init__(self, section, mod, point_process=None):
-        self._section_name = section.hname()
-        self._section = weakref.proxy(section)
-        self._mod = mod
-        self._pp = point_process
-        self._references = []
-
-    def __neuron__(self):
-        if self._pp is not None:
-            try:
-                from patch import transform
-
-                return transform(self._pp)
-            except Exception:
-                pass
-            return self._pp
-        else:
-            raise TypeError(
-                "Density mechanisms can't be retrieved as a standalone Patch/NEURON "
-                "entity. "
-            )
-
-    def __ref__(self, other):
-        self._references.append(other)
-
-    def __deref__(self, other):
-        self._references.remove(other)
-
-    @property
-    def _connections(self):
-        try:
-            return self._pp._connections
-        except AttributeError:
-            raise TypeError("Can't connect Patch/NEURON entities to a density mechanism.")
-
-    @_connections.setter
-    def _connections(self, value):
-        self._pp._connections = value
-
-    def stimulate(self, *args, **kwargs):
-        if self._pp is not None:
-            return self._pp.stimulate(*args, **kwargs)
-        else:
-            raise TypeError("Can't stimulate a DensityMechanism.")
-
-    def record(self, param=None, x=0.5):
-        from patch import p
-
-        if param is not None and self._pp is None:
-            return p.record(
-                getattr(self._section(x), f"_ref_{param}_{self._mod.mod_name}")
-            )
-        else:
-            return p.record(self)
-
-    def __record__(self):
-        if self._pp is not None:
-            return self._pp.__record__()
-        else:
-            raise TypeError(
-                "No default record for DensityMechanisms, use .record('param') instead."
-            )
-
-    def set(self, attribute_or_dict, value=None, /, x=None):
-        if value is None:
-            for k, v in attribute_or_dict.items():
-                self.set_parameter(k, v, x)
-        else:
-            self.set_parameter(attribute_or_dict, value, x)
-
-    def set_parameter(self, param, value, x=None):
-        mod = self._mod.mod_name
-        if self._pp is not None:
-            return setattr(self._pp, param, value)
-        try:
-            if x is None:
-                setattr(self._section.__neuron__(), f"{param}_{mod}", value)
-            else:
-                setattr(getattr(self._section(x), mod), value)
-        except ReferenceError:
-            raise ReferenceError(
-                "Trying to set attribute on section"
-                f" '{self._section_name}' that has since been garbage collected"
-            )
-
-    def get_parameter(self, param, x=None):
-        if self._pp is not None:
-            return getattr(self._pp, param)
-        mod = self._mod.mod_name
-        try:
-            if x is None:
-                return getattr(self._section.__neuron__(), f"{param}_{mod}")
-            else:
-                return getattr(getattr(self._section(x), mod), param)
-        except ReferenceError:
-            raise ReferenceError(
-                "Trying to set attribute on section"
-                f" '{self._section_name}' that has since been garbage collected"
-            )
-        except AttributeError:
-            raise AttributeError(
-                f"Parameter '{param}' does not exist on {self._mod.asset_name}"
-            ) from None
-
-    @property
-    def parameters(self):
-        raise NotImplementedError(
-            "Parameter overview not implemented yet. Use `get_parameter` instead."
-        )
