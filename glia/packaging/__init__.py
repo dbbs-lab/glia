@@ -74,8 +74,8 @@ class PackageManager:
             return get_package_transformer(path, attr)
         except PackageError as e:
             raise PackageError(
-                f"Could not determine `{attr} =` "
-                f"(from entry point '{entry_point}') in '{path}'."
+                "Could not determine find package declaration "
+                f"from entry point '{entry_point}' in '{path}'."
             ) from e
 
     def get_mod_files(self, mod_dir: typing.Union[str, Path] = None):
@@ -88,7 +88,7 @@ class PackageManager:
         ]
 
     def get_mod_declarations(self):
-        return self._get_transformer().get_mod_declarations()
+        return self._get_transformer().get_modlist_declaration()
 
     def add_mod_file(
         self,
@@ -99,6 +99,16 @@ class PackageManager:
     ):
         transformer = self._get_transformer()
         mods = transformer.get_mods()
+        if any(
+            m.asset_name == mod.asset_name
+            and m.variant == mod.variant
+            and m.dialect == mod.dialect
+            for m in mods
+        ):
+            raise ValueError("A mod with the same spec already exists")
+        else:
+            transformer.add_mod(mod)
+            transformer.write_in_place()
 
     def get_setting(self, *settings: str):
         node = self.load_pyproject()

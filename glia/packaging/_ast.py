@@ -1,18 +1,20 @@
 import ast
+import inspect
 import itertools
-import typing
-import warnings
 from copy import copy
 from pathlib import Path
 
+import black
+
 from ..assets import Mod
-from ..exceptions import PackageFileError, PackageWarning
+from ..exceptions import PackageApiError, PackageFileError
 
 
 class ModuleReferences:
     def __init__(self, module: ast.Module):
         self.module_names = []
         self.pkg_names = []
+        self.mod_node = None
         self.mod_names = []
         for node in module.body:
             if isinstance(node, ast.Import):
@@ -25,6 +27,8 @@ class ModuleReferences:
                         self.mod_names.append(alias.asname or alias.name)
                     if alias.name == "Package":
                         self.pkg_names.append(alias.asname or alias.name)
+                        # Store this node to insert `Mod` import if it's missing
+                        self.mod_node = node
 
         if not (self.module_names or self.pkg_names or self.mod_names):
             raise PackageFileError("Package file is missing top-level `glia` imports.")
@@ -55,6 +59,24 @@ class ModuleReferences:
     def is_mod_target(self, node: ast.expr):
         return self._is_call(node, "Mod", self.mod_names)
 
+    def make_mod_call_node(self):
+        if self.mod_names:
+            func = ast.Name(self.mod_names[0])
+        else:
+            if not self.module_names:
+                # The package file does not contain a `Mod` import, and also no `import
+                # glia` so it must contain a `from glia import Package`, so we can
+                # append `, Mod`.
+                self.mod_node.names.append(ast.alias("Mod"))
+                self.mod_names.append("Mod")
+                func = ast.Name("Mod")
+            else:
+                func = ast.Attribute(ast.Name(self.module_names[0]), ast.Name("Mod"))
+        return ast.Call(func, [], [])
+
+    def has_mod_ref(self):
+        return self.mod_names or self.module_names
+
 
 class PackageTransformer(ast.NodeTransformer):
     def __init__(self, path: Path, module: ast.Module, pkg_id: str):
@@ -77,22 +99,28 @@ class PackageTransformer(ast.NodeTransformer):
                 ]
                 if pkgs:
                     if pkg is not None:
-                        warnings.warn(
-                            f"Multiple top-level '{pkg_id} =' statements.", PackageWarning
+                        raise PackageFileError(
+                            f"Multiple top-level '{pkg_id}' assignments."
                         )
                     if len(node.targets) != 1:
                         raise PackageFileError(
-                            "Tuple unpacking is not allowed in package assigment statements."
+                            "Tuple unpacking is not allowed "
+                            "in package assigment statements."
                         )
                     if self._refs.is_package_target(node.value):
                         pkg = node.value
+                    else:
+                        raise PackageFileError(
+                            f"Top-level assignment to '{pkg_id}' "
+                            "is not a `glia.Package` declaration."
+                        )
         if not pkg:
             raise PackageFileError(
                 f"No top-level package declaration found for '{pkg_id}'"
             )
         return pkg
 
-    def get_mod_declarations(self) -> typing.List[ast.Call]:
+    def get_modlist_declaration(self) -> ast.List:
         for keyword in self.pkg_node.keywords:
             if keyword.arg == "mods":
                 modlist = keyword.value
@@ -105,12 +133,13 @@ class PackageTransformer(ast.NodeTransformer):
                         raise PackageFileError(
                             f"'{ast.unparse(mod)}' is not a valid `glia.Mod` declaration."
                         )
-                return modlist.elts
+                return modlist
         raise PackageFileError("Missing `mods` keyword argument for `Package` call.")
 
-    def get_mods(self):
+    def get_mods(self) -> list[Mod]:
         mods = []
-        for mod_call in self.get_mod_declarations():
+        for mod_call in self.get_modlist_declaration().elts:
+            mod_call: ast.Call
             if any(
                 not isinstance(arg, ast.Constant)
                 for arg in itertools.chain(
@@ -124,12 +153,43 @@ class PackageTransformer(ast.NodeTransformer):
             mod_node.func = ast.Name("Mod")
             mod_str = ast.unparse(mod_node)
             try:
-                mods.append(eval(mod_str, {"Mod": Mod}))
+                mod = eval(mod_str, {"Mod": Mod})
+                mods.append(mod)
             except Exception as e:
                 raise PackageFileError(
                     f"`{mod_str}` is not a valid glia.Mod declaration."
                 ) from e
         return mods
+
+    def add_mod(self, mod: Mod):
+        modlist = self.get_modlist_declaration()
+        modlist.elts.append(self.make_mod_node(mod))
+
+    def make_mod_node(self, mod: Mod):
+        call = self._refs.make_mod_call_node()
+        for param in inspect.signature(Mod).parameters.values():
+            try:
+                value = getattr(mod, param.name)
+            except AttributeError:
+                raise PackageApiError(f"Can't read attribute `Mod.{param.name}`.")
+            if value == param.default:
+                continue
+            if param.kind == inspect.Parameter.POSITIONAL_OR_KEYWORD:
+                call.args.append(ast.Constant(value))
+            elif param.kind == inspect.Parameter.KEYWORD_ONLY:
+                call.keywords.append(ast.keyword(param.name, ast.Constant(value)))
+            else:
+                raise PackageApiError("Couldn't process glia.Mod class arguments.")
+        return call
+
+    def write_in_place(self):
+        print(
+            black.format_file_contents(
+                ast.unparse(self._module),
+                fast=True,
+                mode=black.Mode(),
+            )
+        )
 
 
 def get_package_transformer(path: Path, pkg_id: str):

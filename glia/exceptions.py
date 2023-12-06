@@ -16,9 +16,10 @@ _make_tree(
             AssetLookupError=_e(),
         ),
         PackageError=_e(
-            PackageProjectError=_e(),
+            PackageApiError=_e(),
             PackageFileError=_e(),
             PackageModError=_e(),
+            PackageProjectError=_e(),
             PackageVersionError=_e(),
         ),
         CatalogueError=_e(BuildCatalogueError=_e()),
@@ -35,9 +36,10 @@ NoMatchesError: Type[ResolveError]
 UnknownAssetError: Type[ResolveError]
 AssetLookupError: Type[ResolveError]
 PackageError: Type[GliaError]
+PackageApiError: Type[PackageError]
 PackageFileError: Type[PackageError]
-PackageProjectError: Type[PackageError]
 PackageModError: Type[PackageError]
+PackageProjectError: Type[PackageError]
 PackageVersionError: Type[PackageError]
 CatalogueError: Type[GliaError]
 BuildCatalogueError: Type[CatalogueError]
