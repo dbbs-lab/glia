@@ -68,7 +68,8 @@ class Mod:
     def __init__(
         self,
         relpath: str,
-        name,
+        asset_name,
+        *,
         variant="0",
         is_point_process=False,
         is_artificial_cell=False,
@@ -76,8 +77,8 @@ class Mod:
         builtin=False,
     ):
         self._pkg: typing.Optional[Package] = None
-        self._relpath = relpath
-        self.asset_name = name
+        self.relpath = relpath
+        self.asset_name = asset_name
         self.variant = variant
         self.is_point_process = is_point_process
         self.is_artificial_cell = is_artificial_cell
@@ -107,7 +108,7 @@ class Mod:
 
     @property
     def path(self):
-        return self.pkg.root / self._relpath
+        return self.pkg.root / self.relpath
 
 
 class Catalogue:
