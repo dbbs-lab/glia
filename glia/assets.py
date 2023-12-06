@@ -69,7 +69,7 @@ class Mod:
         self,
         relpath: str,
         name,
-        variant,
+        variant="0",
         is_point_process=False,
         is_artificial_cell=False,
         dialect: typing.Union[typing.Literal["arbor"], typing.Literal["neuron"]] = None,
