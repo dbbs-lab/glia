@@ -14,14 +14,17 @@ if typing.TYPE_CHECKING:
 
 
 class Package:
-    def __init__(self, name, path, mods=None, builtin=False):
+    def __init__(self, name, *, mods=None, builtin=False):
         self.name = name
-        self.path = path
         self.mods = [] if mods is None else mods
         # Exceptional flag for the NEURON builtins.
         # They need a definition to be `insert`ed,
         # but have no mod files to be compiled.
         self.builtin = builtin
+        self._advert = None
+
+    def set_advert(self, advert):
+        self._advert = advert
 
     @classmethod
     def from_remote(cls, manager, advert):
