@@ -8,6 +8,9 @@ from black import find_project_root
 from ..exceptions import PackageError, PackageFileError, PackageProjectError
 from ._ast import PackageTransformer, get_package_transformer
 
+if typing.TYPE_CHECKING:
+    from ..assets import Mod
+
 
 class PackageManager:
     def __init__(self, path: typing.Union[str, os.PathLike]):
@@ -87,8 +90,15 @@ class PackageManager:
     def get_mod_declarations(self):
         return self._get_transformer().get_mod_declarations()
 
-    def add_mod_file(self):
-        pass
+    def add_mod_file(
+        self,
+        source: Path,
+        mod: "Mod",
+        mod_dir: typing.Union[str, Path] = None,
+        overwrite=False,
+    ):
+        transformer = self._get_transformer()
+        mods = transformer.get_mods()
 
     def get_setting(self, *settings: str):
         node = self.load_pyproject()
