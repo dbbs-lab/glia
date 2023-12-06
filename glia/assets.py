@@ -44,69 +44,47 @@ class Package:
 class Mod:
     def __init__(
         self,
-        pkg,
+        relpath: str,
         name,
         variant,
         is_point_process=False,
         is_artificial_cell=False,
+        dialect: typing.Union[typing.Literal["arbor"], typing.Literal["neuron"]] = None,
         builtin=False,
     ):
-        self.pkg = pkg
-        self.pkg_name = pkg.name
-        self.namespace = "glia__" + pkg.name
+        self._pkg: typing.Optional[Package] = None
+        self._relpath = relpath
         self.asset_name = name
         self.variant = variant
         self.is_point_process = is_point_process
         self.is_artificial_cell = is_artificial_cell
+        self.dialect = dialect
         self.builtin = builtin
 
-    @classmethod
-    def from_remote(cls, package, remote_object):
-        excluded = ["pkg_name", "asset_name", "namespace", "pkg", "_name_statement"]
-        key_map = {
-            "asset_name": "name",
-            "_is_point_process": "is_point_process",
-            "_is_artificial_cell": "is_artificial_cell",
-        }
-        required = ["asset_name", "variant"]
-        kwargs = {}
-        # Copy over allowed
-        for key, value in remote_object.__dict__.items():
-            if key not in excluded:
-                kwargs[key if key not in key_map else key_map[key]] = value
-        for remote_attr in required:
-            local_attr = (
-                remote_attr if remote_attr not in key_map else key_map[remote_attr]
-            )
-            try:
-                kwargs[local_attr] = remote_object.__dict__[remote_attr]
-            except KeyError:
-                e_str = "A mod"
-                if "name" in kwargs:
-                    e_str = kwargs["name"]
-                raise PackageModError(
-                    e_str
-                    + " in {} did not specify required attribute '{}'.".format(
-                        package.name, remote_attr
-                    )
-                )
-        try:
-            return cls(package, **kwargs)
-        except TypeError as e:
-            attr = str(e)[str(e).find("'") : -1]
-            raise PackageModError(
-                "Mod specified an unknown attribute {}'".format(attr)
-            ) from None
+    def set_package(self, package: Package):
+        self._pkg = package
+
+    @property
+    def pkg(self):
+        return self._pkg
+
+    @property
+    def pkg_name(self):
+        return self._pkg.name
+
+    @property
+    def mech_id(self):
+        return (self.asset_name, self.variant, self.pkg_name)
 
     @property
     def mod_name(self):
         if self.builtin:
             return self.asset_name
-        return "{}__{}__{}".format(self.namespace, self.asset_name, self.variant)
+        return f"glia__{self.asset_name}__{self.variant}"
 
     @property
     def mod_path(self):
-        return os.path.abspath(os.path.join(self.pkg.mod_path, self.mod_name + ".mod"))
+        return self.pkg.root / self._relpath
 
 
 class Catalogue:
