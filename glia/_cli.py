@@ -122,7 +122,7 @@ def test(*args, verbose=False):
         except TooManyMatchesError as e:
             mstr = "[MULTI]"
             estr = str(e)
-        except LookupError as e:
+        except AssetLookupError as e:
             mstr = "[X]"
             estr = str(e)
         if _mpi.main_node:

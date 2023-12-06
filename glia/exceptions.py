@@ -9,11 +9,11 @@ _make_tree(
         CompileError=_e(),
         LibraryError=_e(),
         NeuronError=_e(),
-        LookupError=_e(),
         ResolveError=_e(
             TooManyMatchesError=_e("matches", "asset", "pkg", "variant"),
             NoMatchesError=_e("pkg", "variant"),
             UnknownAssetError=_e(),
+            AssetLookupError=_e(),
         ),
         PackageError=_e(
             PackageFileError=_e(),
@@ -28,11 +28,11 @@ GliaError: Type[Exception]
 CompileError: Type[GliaError]
 LibraryError: Type[GliaError]
 NeuronError: Type[GliaError]
-LookupError: Type[GliaError]
 ResolveError: Type[GliaError]
 TooManyMatchesError: Type[ResolveError]
 NoMatchesError: Type[ResolveError]
 UnknownAssetError: Type[ResolveError]
+AssetLookupError: Type[ResolveError]
 PackageError: Type[GliaError]
 PackageFileError: Type[PackageError]
 PackageModError: Type[PackageError]
