@@ -90,6 +90,7 @@ class Glia:
     @property
     @lru_cache(maxsize=1)
     def packages(self) -> typing.List[Package]:
+        packages = []
         eps = entry_points()
         if not hasattr(eps, "select"):
             eps = _EntryPointsPatch(eps)
@@ -102,6 +103,7 @@ class Glia:
     @property
     @lru_cache(maxsize=1)
     def catalogues(self) -> typing.Mapping[str, Catalogue]:
+        catalogues = {}
         eps = entry_points()
         if not hasattr(eps, "select"):
             eps = _EntryPointsPatch(eps)
