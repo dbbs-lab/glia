@@ -1,7 +1,9 @@
 import ast
-from ast import NodeTransformer, NodeVisitor
+import warnings
+from ast import NodeVisitor
+from pathlib import Path
 
-from ..exceptions import PackageFileError
+from ..exceptions import PackageFileError, PackageWarning
 
 
 class FindImportVisitor(NodeVisitor):
@@ -16,9 +18,9 @@ class FindImportVisitor(NodeVisitor):
         super().visit(node)
         self.depth -= 1
         if self.depth < 0:
-            if not (self.module_names or (self.pkg_names and self.mod_names)):
+            if not (self.module_names or self.pkg_names or self.mod_names):
                 raise PackageFileError(
-                    "Package file does not appear to contain top-level `glia` imports."
+                    "Package file should contain top-level `glia` imports."
                 )
 
     def visit_Import(self, node):
@@ -54,9 +56,9 @@ class FindPackageVisitor(FindImportVisitor):
         pkg = [n for n in node.targets if isinstance(n, ast.Name) and n.id == self.pkg_id]
         if pkg:
             if self.pkg_node is not None:
-                raise PackageFileError("Duplicate `package` statements.")
+                warnings.warn(f"Multiple '{self.pkg_id} =' statements.", PackageWarning)
             if len(node.targets) != 1:
-                raise PackageFileError("`package` statement must be simple assignment.")
+                raise PackageFileError("Can't unpack package assignment statement.")
             if isinstance(node.value, ast.Call):
                 func = node.value.func
                 if isinstance(func, ast.Name) and func.id in self.pkg_names:
@@ -74,10 +76,26 @@ class FindPackageVisitor(FindImportVisitor):
                     self.pkg_node = node.value
 
 
-def find_package(pkg_id, body):
-    visitor = FindPackageVisitor(pkg_id)
+class PackageTransformer(ast.NodeTransformer):
+    def __init__(self, path: Path, module: ast.Module, package: ast.Call):
+        super().__init__()
+        self._path = path
+        self._module = module
+        self._package = package
+
+    @property
+    def path(self):
+        return self._path
+
+    def get_mod_declarations(self):
+        self._package.args
+
+
+def get_package_transformer(path: Path, asn_id: str):
+    body = ast.parse(path.read_text())
+    visitor = FindPackageVisitor(asn_id)
     visitor.visit(body)
     if visitor.pkg_node is None:
-        raise PackageFileError(f"Package `{pkg_id}` not found.")
+        raise PackageFileError(f"No `{asn_id} =` assignment found.")
     else:
-        return visitor.pkg_node
+        return PackageTransformer(path, body, visitor.pkg_node)
