@@ -1,5 +1,9 @@
 import hashlib
+import typing
 from pathlib import Path
+
+if typing.TYPE_CHECKING:
+    from .assets import Package
 
 
 def hash_update_from_file(filename, hash):
@@ -33,3 +37,14 @@ def get_directory_hash(directory):
 
 def hash_path(path):
     return hashlib.md5(path.encode()).hexdigest()
+
+
+def get_package_hash(package: "Package"):
+    h = hashlib.md5()
+    for mod in package.mods:
+        if not mod.path.exists():
+            raise FileNotFoundError(
+                f"Modfile {package.name}.{mod.mech_id} not found at '{mod.path}'"
+            )
+        hash_update_from_file(mod.mod_path, h)
+    return h.hexdigest()
