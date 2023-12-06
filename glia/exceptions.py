@@ -16,6 +16,7 @@ _make_tree(
             AssetLookupError=_e(),
         ),
         PackageError=_e(
+            PackageProjectError=_e(),
             PackageFileError=_e(),
             PackageModError=_e(),
             PackageVersionError=_e(),
@@ -35,7 +36,12 @@ UnknownAssetError: Type[ResolveError]
 AssetLookupError: Type[ResolveError]
 PackageError: Type[GliaError]
 PackageFileError: Type[PackageError]
+PackageProjectError: Type[PackageError]
 PackageModError: Type[PackageError]
 PackageVersionError: Type[PackageError]
 CatalogueError: Type[GliaError]
 BuildCatalogueError: Type[CatalogueError]
+
+
+class PackageWarning(Warning):
+    pass
