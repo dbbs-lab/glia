@@ -5,8 +5,10 @@ import typing
 import warnings
 from functools import lru_cache, wraps
 from importlib.metadata import entry_points
+from pathlib import Path
 from shutil import copy2 as copy_file
 from shutil import rmtree as rmdir
+from traceback import format_exc
 
 from . import _mpi
 from ._fs import (
@@ -86,7 +88,16 @@ class Glia:
         packages = []
         for pkg_ptr in entry_points().get("glia.package", []):
             self.entry_points.append(pkg_ptr)
-            packages.append(pkg_ptr.load())
+            try:
+                packages.append(pkg_ptr.load())
+            except Exception as e:
+                log_path = Path(get_cache_path("packages.txt"))
+                log_path.write_text(
+                    log_path.read_text() + "\n" + format_exc(),
+                )
+                warnings.warn(
+                    f"Could not load '{pkg_ptr.value}'. See '{log_path}' for full log."
+                )
         return packages
 
     @property
