@@ -6,7 +6,7 @@ import toml
 from black import find_project_root
 
 from ..exceptions import PackageError, PackageFileError, PackageProjectError
-from ._ast import PackageTransformer, get_package_transformer
+from ._ast import NmodlWriter, PackageTransformer, get_package_transformer
 
 if typing.TYPE_CHECKING:
     from ..assets import Mod
@@ -78,14 +78,20 @@ class PackageManager:
                 f"from entry point '{entry_point}' in '{path}'."
             ) from e
 
+    def get_mod_dir(self, mod_dir: typing.Union[str, Path] = None):
+        if mod_dir is None:
+            mod_dir = self.get_setting("package", "mod-dir")
+        mod_dir = Path(mod_dir)
+        return self.get_package_path() / mod_dir
+
+    def get_rel_path(self, mod_dir: typing.Union[str, Path] = None):
+        return self.get_mod_dir(mod_dir).relative_to(self.get_package_path())
+
+    def get_package_path(self):
+        return self.path / self.get_module_path().relative_to(self.path).parts[0]
+
     def get_mod_files(self, mod_dir: typing.Union[str, Path] = None):
-        return [
-            *(
-                self.path
-                / self.get_module_path().relative_to(self.path).parts[0]
-                / (mod_dir or self.get_setting("package", "mod-dir"))
-            ).rglob("*.mod")
-        ]
+        return [*(self.get_mod_dir(mod_dir)).rglob("*.mod")]
 
     def get_mod_declarations(self):
         return self._get_transformer().get_modlist_declaration()
@@ -107,6 +113,11 @@ class PackageManager:
         ):
             raise ValueError("A mod with the same spec already exists")
         else:
+            dest = self.get_package_path()
+            mod.relpath = str(self.get_rel_path(mod_dir) / source.stem)
+            print("relpath set to", mod.relpath)
+            writer = NmodlWriter(mod)
+            writer.import_source(source, dest)
             transformer.add_mod(mod)
             transformer.write_in_place()
 

@@ -1,6 +1,7 @@
 import ast
 import inspect
 import itertools
+import typing
 from copy import copy
 from pathlib import Path
 
@@ -8,6 +9,9 @@ import black
 
 from ..assets import Mod
 from ..exceptions import PackageApiError, PackageFileError
+
+if typing.TYPE_CHECKING:
+    from nmodl import NmodlDriver
 
 
 class ModuleReferences:
@@ -195,3 +199,43 @@ class PackageTransformer(ast.NodeTransformer):
 def get_package_transformer(path: Path, pkg_id: str):
     module = ast.parse(path.read_text(), str(path))
     return PackageTransformer(path, module, pkg_id)
+
+
+class NmodlWriter:
+    def __init__(self, mod: Mod):
+        self._mod = mod
+        self._source = None
+        self._driver: "NmodlDriver" = None
+
+    @property
+    def nmodl(self):
+        try:
+            import nmodl
+
+            return nmodl
+        except ImportError as e:
+            raise RuntimeError(
+                "`nmodl` package unavailable. Try to install it. If you are on Windows, "
+                "please see https://github.com/BlueBrain/nmodl/issues/1112"
+            ) from e
+
+    def parse_source(self, source: Path):
+        self._source = self.nmodl.NmodlDriver().parse_file(str(source.resolve()))
+
+    def update_source_ast(self):
+        if self._source is None:
+            raise RuntimeError(f"No nmodl source set for {self._mod}")
+
+    def import_source(self, source: Path, dest: Path):
+        dest.mkdir(parents=True, exist_ok=True)
+        mod_path = (dest / self._mod.relpath).resolve().with_suffix(".mod")
+        self.parse_source(source)
+        self.update_source_ast()
+        print("Reading from:", source)
+        print("Writing to:", mod_path)
+        self.write(mod_path)
+
+    def write(self, target: Path):
+        if self._source is None:
+            raise RuntimeError(f"No nmodl source set for {self._mod}")
+        target.write_text(self.nmodl.to_nmodl(self._source))
