@@ -38,6 +38,11 @@ MechId = typing.Union[
 ]
 
 
+class _EntryPointsPatch(dict):
+    def select(self, name):
+        return self.get(name, [])
+
+
 def _requires_install(func):
     @wraps(func)
     def wrapper(self, *args, **kwargs):
@@ -86,7 +91,10 @@ class Glia:
     @lru_cache(maxsize=1)
     def packages(self) -> typing.List[Package]:
         packages = []
-        for pkg_ptr in entry_points().get("glia.package", []):
+        eps = entry_points()
+        if not hasattr(eps, "select"):
+            eps = _EntryPointsPatch(eps)
+        for pkg_ptr in eps.select("glia.package"):
             self.entry_points.append(pkg_ptr)
             try:
                 packages.append(pkg_ptr.load())
@@ -103,8 +111,11 @@ class Glia:
     @property
     @lru_cache(maxsize=1)
     def catalogues(self) -> typing.Mapping[str, Catalogue]:
-        catalogues: typing.Mapping[str, Catalogue] = {}
-        for pkg_ptr in entry_points().get("glia.catalogue", []):
+        catalogues = {}
+        eps = entry_points()
+        if not hasattr(eps, "select"):
+            eps = _EntryPointsPatch(eps)
+        for pkg_ptr in eps.select("glia.catalogue"):
             advert = pkg_ptr.load()
             self.entry_points.append(pkg_ptr)
             if advert.name in catalogues:
