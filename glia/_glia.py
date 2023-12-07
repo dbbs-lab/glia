@@ -5,10 +5,8 @@ import typing
 import warnings
 from functools import lru_cache, wraps
 from importlib.metadata import entry_points
-from pathlib import Path
 from shutil import copy2 as copy_file
 from shutil import rmtree as rmdir
-from traceback import format_exc
 
 from . import _mpi
 from ._fs import (
@@ -94,7 +92,7 @@ class Glia:
         eps = entry_points()
         if not hasattr(eps, "select"):
             eps = _EntryPointsPatch(eps)
-        for pkg_ptr in eps.select("glia.package"):
+        for pkg_ptr in eps.select(name="glia.package"):
             self.entry_points.append(pkg_ptr)
             try:
                 packages.append(pkg_ptr.load())
@@ -115,7 +113,7 @@ class Glia:
         eps = entry_points()
         if not hasattr(eps, "select"):
             eps = _EntryPointsPatch(eps)
-        for pkg_ptr in eps.select("glia.catalogue"):
+        for pkg_ptr in eps.select(name="glia.catalogue"):
             advert = pkg_ptr.load()
             self.entry_points.append(pkg_ptr)
             if advert.name in catalogues:
