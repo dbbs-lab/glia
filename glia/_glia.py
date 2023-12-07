@@ -15,6 +15,7 @@ from ._fs import (
     get_cache_path,
     get_data_path,
     get_neuron_mod_path,
+    log,
     read_cache,
     update_cache,
 )
@@ -97,13 +98,7 @@ class Glia:
             try:
                 packages.append(pkg_ptr.load())
             except Exception as e:
-                log_path = Path(get_cache_path("packages.txt"))
-                log_path.write_text(
-                    log_path.read_text() + "\n" + format_exc(),
-                )
-                warnings.warn(
-                    f"Could not load '{pkg_ptr.value}'. See '{log_path}' for full log."
-                )
+                log(f"Could not load package '{pkg_ptr.name}'", exc=e)
         return packages
 
     @property

@@ -1,11 +1,40 @@
+import datetime
 import json
 import os
+import typing
+import warnings
+from pathlib import Path
+from traceback import format_exception
 
 import appdirs
 
 from glia._hash import hash_path
 
 _install_dirs = appdirs.AppDirs(appname="Glia", appauthor="DBBS")
+
+LogLevel = typing.Union[
+    typing.Literal["log"], typing.Literal["warn"], typing.Literal["error"]
+]
+
+
+def log(message: str, *, level: LogLevel = None, category=None, exc: Exception = None):
+    log_path = Path(get_cache_path(f"{id('5')}.txt"))
+    if exc is not None and level is None:
+        level = "error"
+    if level:
+        level = level.upper()
+    header = " ".join(str(c) for c in (datetime.datetime.now(), level, category) if c)
+    with open(log_path, "r+") as f:
+        f.write(f"[{header}] {message}")
+        if exc:
+            f.write(":\n")
+            f.writelines(
+                "  " + "\n  ".join(line.split("\n"))
+                for line in format_exception(type(exc), exc, exc.__traceback__)
+            )
+            warnings.warn(message + f". See the full log at '{log_path}'.")
+        else:
+            f.write("\n")
 
 
 def get_glia_path():
