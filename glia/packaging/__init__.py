@@ -96,13 +96,7 @@ class PackageManager:
     def get_mod_declarations(self):
         return self._get_transformer().get_modlist_declaration()
 
-    def add_mod_file(
-        self,
-        source: Path,
-        mod: "Mod",
-        mod_dir: typing.Union[str, Path] = None,
-        overwrite=False,
-    ):
+    def add_mod_file(self, source: Path, mod: "Mod"):
         transformer = self._get_transformer()
         mods = transformer.get_mods()
         if any(
@@ -114,7 +108,6 @@ class PackageManager:
             raise ValueError("A mod with the same spec already exists")
         else:
             dest = self.get_package_path()
-            mod.relpath = str(self.get_rel_path(mod_dir) / source.stem)
             print("relpath set to", mod.relpath)
             writer = NmodlWriter(mod)
             writer.import_source(source, dest)
@@ -123,7 +116,7 @@ class PackageManager:
 
     def get_setting(self, *settings: str):
         node = self.load_pyproject()
-        for part in ["tool", "glia", *settings]:
+        for part in ("tool", "glia", *settings):
             node = node.get(part, None)
             if node is None:
                 return self.get_default(*settings)

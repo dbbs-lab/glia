@@ -228,11 +228,9 @@ class NmodlWriter:
 
     def import_source(self, source: Path, dest: Path):
         dest.mkdir(parents=True, exist_ok=True)
-        mod_path = (dest / self._mod.relpath).resolve().with_suffix(".mod")
+        mod_path = (dest / self._mod.relpath).resolve()
         self.parse_source(source)
         self.update_source_ast()
-        print("Reading from:", source)
-        print("Writing to:", mod_path)
         self.write(mod_path)
 
     def write(self, target: Path):
