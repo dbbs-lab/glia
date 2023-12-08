@@ -24,7 +24,8 @@ def log(message: str, *, level: LogLevel = None, category=None, exc: Exception =
     if level:
         level = level.upper()
     header = " ".join(str(c) for c in (datetime.datetime.now(), level, category) if c)
-    with open(log_path, "r+") as f:
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(log_path, "a") as f:
         f.write(f"[{header}] {message}")
         if exc:
             f.write(":\n")

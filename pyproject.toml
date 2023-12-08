@@ -10,12 +10,13 @@ license = {file = "LICENSE"}
 classifiers = ["License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)"]
 dynamic = ["version", "description"]
 dependencies= [
+    "click~=8.0",
     "appdirs~=1.0",
     "errr~=1.2",
     "cookiecutter~=2.0",
     "black>=23.0.0",
     "toml~=0.10",
-    "nmodl~=0.5"
+    "nmodl~=0.5;sys_platform != 'win32'"
 ]
 
 [tool.flit.module]
@@ -25,7 +26,7 @@ name = "glia"
 Home = "https://github.com/dbbs-lab/glia"
 
 [project.scripts]
-glia = "glia._cli:glia_cli"
+glia = "glia._cli:glia"
 
 [project.optional-dependencies]
 parallel = [

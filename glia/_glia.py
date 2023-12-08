@@ -449,7 +449,9 @@ class Glia:
                 elif is_point_process(key):
                     builtin_mechs.append((key, True))
             for mech, point_process in builtin_mechs:
-                mod = Mod(nrn_pkg, mech, 0, builtin=True, is_point_process=point_process)
+                mod = Mod(
+                    None, mech, variant=0, builtin=True, is_point_process=point_process
+                )
                 nrn_pkg.mods.append(mod)
             self.packages.append(nrn_pkg)
             if self.resolver:
