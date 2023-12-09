@@ -23,6 +23,7 @@ _make_tree(
             PackageVersionError=_e(),
         ),
         CatalogueError=_e(BuildCatalogueError=_e()),
+        NmodlError=_e(ModSourceError=_e()),
     ),
 )
 
@@ -43,6 +44,8 @@ PackageProjectError: Type[PackageError]
 PackageVersionError: Type[PackageError]
 CatalogueError: Type[GliaError]
 BuildCatalogueError: Type[CatalogueError]
+NmodlError: Type[GliaError]
+ModSourceError: Type[NmodlError]
 
 
 class PackageWarning(Warning):

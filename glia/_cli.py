@@ -1,7 +1,10 @@
+from pathlib import Path
+
 import click
 
 from . import _manager, _mpi
 from .exceptions import *
+from .packaging import PackageManager
 
 
 @click.group()
@@ -127,3 +130,39 @@ def test(mechanisms, verbose=False):
 @click.option("--gpu/--cpu", default=False)
 def build(catalogue, verbose, debug, gpu):
     _manager.build_catalogue(catalogue, verbose=verbose, debug=debug, gpu=gpu)
+
+
+@glia.group(help="All commands related to packaging your NMODL files for others")
+def pkg():
+    pass
+
+
+@pkg.command(help="Create a new Glia package.")
+def new():
+    from cookiecutter.main import cookiecutter
+
+    cookiecutter(str((Path(__file__).parent / "cookiecutter-glia").resolve()))
+
+
+@pkg.command(help="Add a mod file to the current package.")
+@click.argument("source", type=click.Path(exists=True, dir_okay=False))
+@click.option("-w", "--overwrite", is_flag=True, default=False)
+@click.option("-n", "--name", prompt=True, required=True)
+@click.option("-t", "--target", default=None, type=click.Path(dir_okay=False))
+@click.option("-v", "--variant", default="0")
+def add(source, name, variant, overwrite, target):
+    source = Path(source)
+    pkg = PackageManager(Path())
+    mod_path = pkg.get_mod_dir(target)
+    if mod_path.is_dir():
+        mod_path /= f"{name}__{variant}.mod"
+    if not overwrite and mod_path.exists():
+        raise FileExistsError(f"Target mod file '{mod_path.resolve()}' already exists.")
+    mod = pkg.get_mod_from_source(source, name=name, variant=variant)
+    mod.relpath = pkg.get_rel_path(mod_path)
+    pkg.add_mod_file(source, mod)
+
+
+@pkg.command(help="Check for integrity problems with the package")
+def check():
+    pass

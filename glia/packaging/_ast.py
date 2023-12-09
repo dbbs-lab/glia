@@ -8,7 +8,7 @@ from pathlib import Path
 import black
 
 from ..assets import Mod
-from ..exceptions import PackageApiError, PackageFileError
+from ..exceptions import ModSourceError, PackageApiError, PackageFileError
 
 if typing.TYPE_CHECKING:
     from nmodl import NmodlDriver
@@ -211,6 +211,9 @@ class NmodlWriter:
     def nmodl(self):
         try:
             import nmodl
+            import nmodl.ast
+            import nmodl.dsl
+            import nmodl.visitor
 
             return nmodl
         except ImportError as e:
@@ -223,8 +226,27 @@ class NmodlWriter:
         self._source = self.nmodl.NmodlDriver().parse_file(str(source.resolve()))
 
     def update_source_ast(self):
-        if self._source is None:
-            raise RuntimeError(f"No nmodl source set for {self._mod}")
+        self._check_source()
+        visitor = self.nmodl.visitor.AstLookupVisitor()
+        block = visitor.lookup(self._source, self.nmodl.ast.AstNodeType.NEURON_BLOCK)
+        statements = [
+            st for st in block[0].statement_block.statements if not st.is_suffix()
+        ]
+        if self._mod.is_artificial_cell:
+            name = "ARTIFICIAL_CELL"
+        elif self._mod.is_point_process:
+            name = "POINT_PROCESS"
+        else:
+            name = "SUFFIX"
+
+        statements.insert(
+            0,
+            self.nmodl.ast.Suffix(
+                self.nmodl.ast.Name(self.nmodl.ast.String(name)),
+                self.nmodl.ast.Name(self.nmodl.ast.String(self._mod.mod_name)),
+            ),
+        )
+        block[0].statement_block.statements = statements
 
     def import_source(self, source: Path, dest: Path):
         dest.mkdir(parents=True, exist_ok=True)
@@ -234,6 +256,25 @@ class NmodlWriter:
         self.write(mod_path)
 
     def write(self, target: Path):
+        self._check_source()
+        target.write_text(self.nmodl.to_nmodl(self._source))
+
+    def extract_source_info(self):
+        self._check_source()
+        visitor = self.nmodl.visitor.AstLookupVisitor()
+        suffixes = visitor.lookup(self._source, self.nmodl.ast.AstNodeType.SUFFIX)
+        if len(suffixes) > 1:
+            raise ModSourceError(
+                "Multiple SUFFIX, POINT_PROCESS, or ARTIFICIAL_CELL statements detected."
+            )
+        elif not suffixes:
+            self._mod.is_artificial_cell = False
+            self._mod.is_point_process = False
+        else:
+            value = str(suffixes[0].type.value)
+            self._mod.is_artificial_cell = value == "ARTIFICIAL_CELL"
+            self._mod.is_point_process = value == "POINT_PROCESS"
+
+    def _check_source(self):
         if self._source is None:
             raise RuntimeError(f"No nmodl source set for {self._mod}")
-        target.write_text(self.nmodl.to_nmodl(self._source))

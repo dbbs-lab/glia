@@ -5,11 +5,9 @@ from pathlib import Path
 import toml
 from black import find_project_root
 
+from ..assets import Mod
 from ..exceptions import PackageError, PackageFileError, PackageProjectError
 from ._ast import NmodlWriter, PackageTransformer, get_package_transformer
-
-if typing.TYPE_CHECKING:
-    from ..assets import Mod
 
 
 class PackageManager:
@@ -129,6 +127,15 @@ class PackageManager:
             if node is None:
                 return None
         return node
+
+    def get_mod_from_source(self, source: Path, name: str, variant: str = "0"):
+        mod = Mod(
+            str(self.get_rel_path() / f"{name}__{variant}.mod"), name, variant=variant
+        )
+        writer = NmodlWriter(mod)
+        writer.parse_source(source)
+        writer.extract_source_info()
+        return mod
 
 
 def _try_find_project_module(path: Path, module_name) -> Path:
