@@ -106,7 +106,6 @@ class PackageManager:
             raise ValueError("A mod with the same spec already exists")
         else:
             dest = self.get_package_path()
-            print("relpath set to", mod.relpath)
             writer = NmodlWriter(mod)
             writer.import_source(source, dest)
             transformer.add_mod(mod)
@@ -128,10 +127,14 @@ class PackageManager:
                 return None
         return node
 
+    def get_package_shim(self):
+        return self._get_transformer().get_package_shim()
+
     def get_mod_from_source(self, source: Path, name: str, variant: str = "0"):
         mod = Mod(
             str(self.get_rel_path() / f"{name}__{variant}.mod"), name, variant=variant
         )
+        mod.set_package(self.get_package_shim())
         writer = NmodlWriter(mod)
         writer.parse_source(source)
         writer.extract_source_info()

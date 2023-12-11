@@ -7,7 +7,7 @@ from pathlib import Path
 
 import black
 
-from ..assets import Mod
+from ..assets import Mod, Package
 from ..exceptions import ModSourceError, PackageApiError, PackageFileError
 
 if typing.TYPE_CHECKING:
@@ -124,13 +124,32 @@ class PackageTransformer(ast.NodeTransformer):
             )
         return pkg
 
+    def get_package_shim(self):
+        return Package(self.get_package_name(), self._path.parent)
+
+    def get_package_name(self):
+        kw_nodes = {kw.arg: kw.value for kw in self.pkg_node.keywords}
+        name_node = kw_nodes.get("name")
+        if name_node is None:
+            try:
+                name_node = self.pkg_node.args[0]
+            except:
+                pass
+        if name_node is None:
+            raise PackageFileError(
+                f"Can't find name argument in package node {ast.unparse(self.pkg_node)}"
+            )
+        if not isinstance(name_node, ast.Constant):
+            raise PackageFileError(f"Package name argument must be a constant.")
+        return name_node.value
+
     def get_modlist_declaration(self) -> ast.List:
         for keyword in self.pkg_node.keywords:
             if keyword.arg == "mods":
                 modlist = keyword.value
                 if not isinstance(modlist, ast.List):
                     raise PackageFileError(
-                        "`mods` keyword argument must be a list literal."
+                        "`mods` keyword argument must be a list statement."
                     )
                 for mod in modlist.elts:
                     if not self._refs.is_mod_target(mod):
@@ -156,8 +175,11 @@ class PackageTransformer(ast.NodeTransformer):
             mod_node = copy(mod_call)
             mod_node.func = ast.Name("Mod")
             mod_str = ast.unparse(mod_node)
+            pkg_name = self.get_package_name()
+            pkg = self.get_package_shim()
             try:
                 mod = eval(mod_str, {"Mod": Mod})
+                mod.set_package(pkg)
                 mods.append(mod)
             except Exception as e:
                 raise PackageFileError(
@@ -176,6 +198,11 @@ class PackageTransformer(ast.NodeTransformer):
                 value = getattr(mod, param.name)
             except AttributeError:
                 raise PackageApiError(f"Can't read attribute `Mod.{param.name}`.")
+            # Convert non-constants to string, otherwise `ast.Constant` calls `__repr__`
+            # and can create invalid runtime code
+            if type(value) not in (str, bool, int, float, type(None)):
+                value = str(value)
+            # Omit default parameter values
             if value == param.default:
                 continue
             if param.kind == inspect.Parameter.POSITIONAL_OR_KEYWORD:
@@ -187,7 +214,7 @@ class PackageTransformer(ast.NodeTransformer):
         return call
 
     def write_in_place(self):
-        print(
+        self._path.write_text(
             black.format_file_contents(
                 ast.unparse(self._module),
                 fast=True,
