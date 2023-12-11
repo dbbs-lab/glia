@@ -143,7 +143,7 @@ class Glia:
         self.compile(check_cache=True)
 
     @_requires_install
-    def package(self, name):
+    def package(self, name) -> Package:
         for pkg in self.packages:
             if pkg.name == name:
                 return pkg
@@ -262,7 +262,11 @@ class Glia:
         """
         try:
             s = self.h.Section()
-            self.insert(s, mechanism)
+            mod = self._resolve_mod(mechanism)
+            if mod.is_artificial_cell:
+                getattr(self.h, mod.mod_name)
+            else:
+                self.insert(s, mechanism)
         except ValueError as e:
             if str(e).find("argument not a density mechanism name") != -1:
                 raise LibraryError(mechanism + " mechanism could not be inserted.")

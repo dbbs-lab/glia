@@ -26,8 +26,6 @@ def import_tmp_package(path):
     spec = importlib.util.spec_from_file_location("__test_package__", path)
     m = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(m)
-    print(Path(m.__file__).read_text())
-    print("module?", m, dir(m), m.__file__)
     return m.package
 
 
@@ -59,7 +57,6 @@ class TestCLI(unittest.TestCase):
 
     def test_list(self):
         result = run_cli_command(["list"])
-        print(result.output, result.exit_code, result.exception)
         self.assertEqual(0, result.exit_code)
 
     @_shared.skipUnlessTestMods

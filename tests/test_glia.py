@@ -17,19 +17,18 @@ class TestPackageDiscovery(unittest.TestCase):
     def test_discovery(self):
         self.assertGreater(len(glia._manager.packages), 0)
 
-    def test_caching(self):
-        cache = read_cache()
-        # Check whether the directory hash for `glia_test_mods` is present.
-        self.assertTrue(
-            any(["glia_test_mods" in hash for hash in cache["mod_hashes"].keys()])
-        )
-
 
 class TestCompilation(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
         glia.compile()
+
+    def test_caching(self):
+        # Test whether the compilation was cached
+        cache = read_cache()
+        pkg = glia._manager.package("glia_test_mods")
+        self.assertEqual(pkg.mod_hash, cache["mod_hashes"].get(pkg.hash))
 
     def test_compilation(self):
         # Check that the library files exist
