@@ -117,7 +117,7 @@ def test(mechanisms, verbose=False):
             mstr = "[X]"
             estr = str(e)
         if _mpi.main_node:
-            click.echo(mstr, mechanism)
+            click.echo(f"{mstr} {mechanism}")
         if verbose and estr != "":
             if _mpi.main_node:
                 click.echo("  -- " + estr)
