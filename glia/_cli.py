@@ -33,7 +33,11 @@ def compile():
 
 @glia.command("list")
 def list_assets():
-    _manager.list_assets()
+    click.echo(
+        "Assets: "
+        + ", ".join(f"{e.name} ({len(e)})" for e in _manager.resolver.index.values()),
+    )
+    click.echo("Packages: " + ", ".join(p.name for p in _manager.packages))
 
 
 @glia.command(help="Set global preferences for an asset.")
@@ -50,8 +54,7 @@ def show(asset):
     index = _manager.resolver.index
     preferences = _manager.resolver._preferences()
     if not asset in index:
-        click.echo(f'Unknown asset "{asset}"')
-        return
+        raise click.exceptions.BadArgumentUsage(f'Unknown ASSET "{asset}"')
     if asset in preferences:
         preference = preferences[asset]
         pref_mod = None
@@ -77,8 +80,7 @@ def show(asset):
 def show_pkg(package):
     candidates = [p for p in _manager.packages if p.name.find(package) != -1]
     if not len(candidates):
-        click.echo("Package not found")
-        return
+        raise click.exceptions.BadArgumentUsage(f'Unknown PACKAGE "{package}"')
     for candidate in candidates:
         click.echo("Package: " + click.style(candidate.name, fg="green"))
         click.echo("=====")
@@ -115,10 +117,10 @@ def test(mechanisms, verbose=False):
             mstr = "[X]"
             estr = str(e)
         if _mpi.main_node:
-            print(mstr, mechanism)
+            click.echo(mstr, mechanism)
         if verbose and estr != "":
             if _mpi.main_node:
-                print("  -- " + estr)
+                click.echo("  -- " + estr)
     if _mpi.main_node:
         click.echo(f"Tests finished: {successes} out of {tests} passed")
 
@@ -141,7 +143,9 @@ def pkg():
 def new():
     from cookiecutter.main import cookiecutter
 
-    cookiecutter(str((Path(__file__).parent / "cookiecutter-glia").resolve()))
+    cookiecutter(
+        str((Path(__file__).parent / "packaging/cookiecutter-glia").resolve()),
+    )
 
 
 @pkg.command(help="Add a mod file to the current package.")
