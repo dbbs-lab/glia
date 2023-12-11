@@ -96,7 +96,7 @@ class Glia:
         eps = entry_points()
         if not hasattr(eps, "select"):
             eps = _EntryPointsPatch(eps)
-        for pkg_ptr in eps.select(name="glia.package"):
+        for pkg_ptr in eps.select(group="glia.package"):
             self.entry_points.append(pkg_ptr)
             try:
                 packages.append(pkg_ptr.load())
@@ -111,7 +111,7 @@ class Glia:
         eps = entry_points()
         if not hasattr(eps, "select"):
             eps = _EntryPointsPatch(eps)
-        for pkg_ptr in eps.select(name="glia.catalogue"):
+        for pkg_ptr in eps.select(group="glia.catalogue"):
             advert = pkg_ptr.load()
             self.entry_points.append(pkg_ptr)
             if advert.name in catalogues:
