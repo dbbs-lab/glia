@@ -104,10 +104,10 @@ class Mod:
     def mod_name(self):
         if self.builtin:
             return self.asset_name
-        return f"glia__{self.asset_name}__{self.variant}"
+        return f"glia__{self.pkg_name}__{self.asset_name}__{self.variant}"
 
     @property
-    def path(self):
+    def path(self) -> Path:
         return self.pkg.root / self.relpath
 
 
