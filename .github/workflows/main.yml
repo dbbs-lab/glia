@@ -39,8 +39,13 @@ jobs:
         pip install -r requirements.txt --prefer-binary
         pip install NEURON==${{ matrix.nrn }}
         pip install -e .
-    - name: Run tests & coverage
-      run: |
-        coverage run -p -m unittest -v
-        mpiexec -n 2 coverage run -p -m unittest -v
-        bash <(curl -s https://codecov.io/bash)
+    - name: Run package-free tests
+      run: coverage run -p -m unittest -v
+    - name: Install test package
+      run: pip install ./tests/data/packages/glia_test_mods
+    - name: Run serial tests
+      run: coverage run -p -m unittest -v
+    - name: Run parallel tests
+      run: mpiexec -n 2 coverage run -p -m unittest -v
+    - name: Upload coverage reports
+      run: bash <(curl -s https://codecov.io/bash)
