@@ -88,7 +88,10 @@ class Glia:
 
     @property
     @lru_cache(maxsize=1)
-    def packages(self) -> typing.List[Package]:
+    def packages(self):
+        return self.discover_packages()
+
+    def discover_packages(self) -> typing.List[Package]:
         packages = []
         eps = entry_points()
         if not hasattr(eps, "select"):
@@ -456,19 +459,6 @@ class Glia:
             self.packages.append(nrn_pkg)
             if self.resolver:
                 self.resolver.construct_index()
-
-    @_requires_install
-    def list_assets(self):
-        print(
-            "Assets:",
-            ", ".join(
-                map(
-                    lambda e: e.name + " (" + str(len(e)) + ")",
-                    self.resolver.index.values(),
-                )
-            ),
-        )
-        print("Packages:", ", ".join(map(lambda p: p.name, self.packages)))
 
 
 def _transform(obj):
