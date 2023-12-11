@@ -12,10 +12,13 @@ from glia import Mod, Package
 from . import _shared
 
 
-def run_cli_command(command, **kwargs):
+def run_cli_command(command, xfail=False, **kwargs):
     runner = CliRunner()
     with runner.isolated_filesystem():
-        return runner.invoke(glia._cli.glia, command, **kwargs)
+        result = runner.invoke(glia._cli.glia, command, **kwargs)
+        if not xfail and result.exception:
+            raise result.exception
+        return result
 
 
 def import_tmp_package(path):
@@ -62,11 +65,11 @@ class TestCLI(unittest.TestCase):
     @_shared.skipUnlessTestMods
     def test_show(self):
         # todo: test this test
-        result = run_cli_command(["show", "Kir2_3"])
+        result = run_cli_command(["show", "AMPA"])
         self.assertEqual(0, result.exit_code)
 
     def test_show_unknown(self):
-        result = run_cli_command(["show", "doesntexist"])
+        result = run_cli_command(["show", "doesntexist"], xfail=True)
         self.assertIn('Unknown ASSET "doesntexist"', result.output)
         self.assertEqual(2, result.exit_code)
 
@@ -77,7 +80,7 @@ class TestCLI(unittest.TestCase):
         self.assertEqual(0, result.exit_code)
 
     def test_show_unknown_pkg(self):
-        result = run_cli_command(["show-pkg", "doesntexist"])
+        result = run_cli_command(["show-pkg", "doesntexist"], xfail=True)
         self.assertIn('Unknown PACKAGE "doesntexist"', result.output)
         self.assertEqual(2, result.exit_code)
 
