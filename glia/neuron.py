@@ -75,6 +75,8 @@ class MechAccessor:
     def set_parameter(self, param, value, x=None):
         mod = self._mod.mod_name
         if self._pp is not None:
+            if param not in self._pp.parameters:
+                raise AttributeError(f"{self} has no parameter '{param}'")
             return setattr(self._pp, param, value)
         try:
             if x is None:
