@@ -1,4 +1,4 @@
-nrn-patch==4.0.0a4
+nrn-patch==4.0.0b0
 requests>=2.31.0
 errr==1.2.0
 mpi4py==3.1.5
@@ -7,4 +7,3 @@ NEURON==8.2.3
 arbor==0.9
 # Test requirements
 coverage==5.4
-glia_test_mods==0.0.3
