@@ -98,3 +98,10 @@ def package(name):
     :type name: str
     """
     return _manager.package(name)
+
+
+def get_packages():
+    """
+    Return all installed packages.
+    """
+    return [*_manager.packages]
