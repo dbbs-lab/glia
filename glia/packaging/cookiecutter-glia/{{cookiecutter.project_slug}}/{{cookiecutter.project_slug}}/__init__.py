@@ -8,11 +8,11 @@ in this package will automatically be available in your Glia library for use in 
 and NEURON brain simulation engines.
 """
 
-__version__ = "{{cookiecutter.version}}"
-
 from pathlib import Path
 
 from glia import Package
+
+__version__ = "{{cookiecutter.version}}"
 
 package = Package(
     "{{cookiecutter.project_slug}}",
