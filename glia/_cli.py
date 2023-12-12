@@ -1,109 +1,109 @@
-import argparse
-import sys
+import shutil
+from pathlib import Path
+
+import click
 
 from . import _manager, _mpi
+from ._fs import clear_cache, get_cache_path, get_local_pkg_path
+from ._local import create_local_package
 from .exceptions import *
+from .packaging import PackageManager
 
 
-def glia_cli():
-    parser = argparse.ArgumentParser()
-    subparsers = parser.add_subparsers()
-
-    compile_parser = subparsers.add_parser(
-        "compile", description="Compile the NEURON mechanism library."
-    )
-    compile_parser.set_defaults(func=compile)
-
-    list_parser = subparsers.add_parser("list", description="List all glia assets.")
-    list_parser.set_defaults(func=list_assets)
-
-    select_parser = subparsers.add_parser(
-        "select", description="Set global preferences for an asset."
-    )
-    select_parser.add_argument("asset", action="store", help="Asset name.")
-    select_parser.add_argument(
-        "-p", "--pkg", action="store", help="Package preference for this asset"
-    )
-    select_parser.add_argument(
-        "-v", "--variant", action="store", help="Variant preference for this asset"
-    )
-    select_parser.set_defaults(
-        func=lambda args: select(
-            args.asset, pkg=args.pkg, variant=args.variant, glbl=True
-        )
-    )
-
-    show_parser = subparsers.add_parser("show", description="Print info on an asset.")
-    show_parser.add_argument("asset", action="store", help="Asset name.")
-    show_parser.set_defaults(func=lambda args: _show_asset(args.asset))
-
-    show_pkg_parser = subparsers.add_parser(
-        "show-pkg", description="Print info on a package."
-    )
-    show_pkg_parser.add_argument("package", action="store", help="Package name")
-    show_pkg_parser.set_defaults(func=lambda args: _show_pkg(args.package))
-
-    test_mech_parser = subparsers.add_parser("test", description="Test a mechanism.")
-    test_mech_parser.add_argument(
-        "mechanisms", nargs="*", action="store", help="Name of the mechanism"
-    )
-    test_mech_parser.add_argument(
-        "--verbose", action="store_true", help="Show error messages"
-    )
-    test_mech_parser.set_defaults(
-        func=lambda args: test(*args.mechanisms, verbose=args.verbose)
-    )
-
-    build_parser = subparsers.add_parser("build", description="Build a catalogue.")
-    build_parser.add_argument("cat_name", action="store", help="Catalogue name")
-    build_parser.add_argument("--verbose", action="store_true", help="Verbose mode")
-    build_parser.add_argument("--debug", action="store_true", help="Debug mode")
-    build_parser.add_argument("--gpu", action="store", help="Build with GPU support")
-    build_parser.set_defaults(func=lambda args: _build_cat(args))
-
-    cl_args = parser.parse_args()
-    if hasattr(cl_args, "func"):
-        try:
-            cl_args.func(cl_args)
-        except GliaError as e:  # pragma: no cover
-            print("GLIA ERROR", str(e))
-            sys.exit(1)
+@click.group()
+def glia():
+    pass
 
 
-def compile(args):
+@glia.command(help="Compile the Glia library")
+def compile():
     if _mpi.main_node:
-        print("Glia is compiling...")
+        click.echo("Glia is compiling...")
     _manager.compile()
     if _mpi.main_node:
-        print("Compilation complete!")
-    assets, _, _ = _manager._collect_asset_state()
+        click.echo("Compilation complete!")
+    assets, _ = _manager._precompile_cache()
     if _mpi.main_node:
-        print(
-            "Compiled assets:",
-            ", ".join(
-                list(
-                    set(
-                        map(
-                            lambda a: a[0].name
-                            + "."
-                            + a[1].asset_name
-                            + "({})".format(a[1].variant),
-                            assets,
-                        )
-                    )
-                )
+        click.echo(
+            "Compiled assets: "
+            + ", ".join(
+                set(f"{mod.pkg.name}.{mod.asset_name}({mod.variant})" for mod in assets)
             ),
         )
-        print("Testing assets ...")
-    test(*_manager.resolver.index.keys())
+        click.echo("Testing assets ...")
+    test(_manager.resolver.index.keys(), standalone_mode=False)
 
 
-def test(*args, verbose=False):
-    if len(args) == 0:
-        args = _manager.resolver.index.keys()
+@glia.command("list", help="List installed components")
+def list_assets():
+    click.echo(
+        "Assets: "
+        + ", ".join(f"{e.name} ({len(e)})" for e in _manager.resolver.index.values()),
+    )
+    click.echo("Packages: " + ", ".join(p.name for p in _manager.packages))
+
+
+@glia.command(help="Set global preferences for an asset.")
+@click.argument("asset")
+@click.option("-p", "--package", default=None, help="Package preference for this asset")
+@click.option("-v", "--variant", default=None, help="Variant preference for this asset")
+def select(asset, package, variant):
+    _manager.select(asset, pkg=package, variant=variant, glbl=True)
+
+
+@glia.command(help="Print info on an asset.")
+@click.argument("asset")
+def show(asset):
+    index = _manager.resolver.index
+    preferences = _manager.resolver._preferences()
+    if not asset in index:
+        raise click.exceptions.BadArgumentUsage(f'Unknown ASSET "{asset}"')
+    if asset in preferences:
+        preference = preferences[asset]
+        pref_mod = None
+        try:
+            pref_mod = _manager.resolver.resolve_preference(asset)
+        except ResolveError as e:
+            click.echo("resolve error" + e)
+            pass
+        pref_string = ""
+        if "package" in preference:
+            pref_string += "pkg=" + preference["package"] + " "
+        if "variant" in preference:
+            pref_string += "variant=" + preference["variant"] + " "
+        click.echo("Current preferences: " + pref_string)
+        click.echo("Current preferred module:" + pref_mod.mod_name)
+    click.echo("Available modules:")
+    for mod in _manager.resolver.index[asset]:
+        click.echo("  *" + mod.mod_name)
+
+
+@glia.command(help="Print info on a package.")
+@click.argument("package")
+def show_pkg(package):
+    candidates = [p for p in _manager.packages if p.name.find(package) != -1]
+    if not len(candidates):
+        raise click.exceptions.BadArgumentUsage(f'Unknown PACKAGE "{package}"')
+    for candidate in candidates:
+        click.echo("Package: " + click.style(candidate.name, fg="green"))
+        click.echo("=====")
+        click.echo(f"Location: {candidate.root}")
+        click.echo()
+        click.echo("Available modules:")
+        for mod in candidate.mods:
+            click.echo(f"  * {mod.mod_name} = {mod.path}")
+        click.echo()
+
+
+@glia.command(help="Test mechanisms")
+@click.argument("mechanisms", nargs=-1)
+def test(mechanisms, verbose=False):
+    if len(mechanisms) == 0:
+        mechanisms = _manager.resolver.index.keys()
     successes = 0
-    tests = len(args)
-    for mechanism in args:
+    tests = len(mechanisms)
+    ecode = 0
+    for mechanism in mechanisms:
         mstr = "[OK]"
         estr = ""
         try:
@@ -112,93 +112,112 @@ def test(*args, verbose=False):
         except LibraryError as e:
             mstr = "[ERROR]"
             estr = str(e)
+            ecode = 1
         except UnknownAssetError as _:
             mstr = "[?]"
+            ecode = 1
         except TooManyMatchesError as e:
             mstr = "[MULTI]"
             estr = str(e)
-        except LookupError as e:
+        except AssetLookupError as e:
             mstr = "[X]"
             estr = str(e)
-        if _mpi.main_node:
-            print(mstr, mechanism)
+        click.echo(f"{mstr} {mechanism}")
         if verbose and estr != "":
-            if _mpi.main_node:
-                print("  -- " + estr)
+            click.echo("  -- " + estr)
     if _mpi.main_node:
-        print("Tests finished:", successes, "out of", tests, "passed")
+        click.echo(f"Tests finished: {successes} out of {tests} passed")
+    exit(ecode)
 
 
-def list_assets(args):
-    _manager.list_assets()
+@glia.command(help="Build an Arbor catalogue")
+@click.argument("catalogue")
+@click.option(
+    "-v", "--verbose", is_flag=True, default=False, help="Show catalogue build output."
+)
+@click.option(
+    "-d",
+    "--debug",
+    is_flag=True,
+    default=False,
+    help="Build in debug mode to inspect build intermediates.",
+)
+@click.option("--gpu/--cpu", default=False, help="Build catalogue for GPU.")
+def build(catalogue, verbose, debug, gpu):
+    _manager.build_catalogue(catalogue, verbose=verbose, debug=debug, gpu=gpu)
 
 
-def select(asset, pkg=None, variant=None, glbl=False):
-    _manager.select(asset, pkg=pkg, variant=variant, glbl=glbl)
+@glia.command(help="Show or clear the cache path used in the current environment")
+@click.option(
+    "--clear",
+    is_flag=True,
+    default=False,
+    help="Clear the cached JSON data and cache directory.",
+)
+def cache(clear):
+    click.echo(get_cache_path())
+    if clear:
+        clear_cache()
+        shutil.rmtree(get_cache_path())
 
 
-## Prints
+@glia.group(help="All commands related to packaging your NMODL files for others")
+def pkg():
+    pass
 
 
-class _colors:
-    HEADER = "\033[95m"
-    OKBLUE = "\033[94m"
-    OKGREEN = "\033[92m"
-    WARNING = "\033[93m"
-    FAIL = "\033[91m"
-    ENDC = "\033[0m"
-    BOLD = "\033[1m"
-    UNDERLINE = "\033[4m"
+@pkg.command(help="Create a new Glia package.")
+def new():
+    from cookiecutter.main import cookiecutter
 
-
-def _show_asset(asset):
-    index = _manager.resolver.index
-    preferences = _manager.resolver._preferences()
-    if not asset in index:
-        print('Unknown asset "{}"'.format(asset))
-        return
-    if asset in preferences:
-        preference = preferences[asset]
-        pref_mod = None
-        try:
-            pref_mod = _manager.resolver.resolve_preference(asset)
-        except ResolveError as e:
-            print("resolve error", e)
-            pass
-        pref_string = ""
-        if "package" in preference:
-            pref_string += "pkg=" + preference["package"] + " "
-        if "variant" in preference:
-            pref_string += "variant=" + preference["variant"] + " "
-        print("Current preferences: ", pref_string)
-        print("Current preferred module:", pref_mod.mod_name)
-    print("Available modules:")
-    for mod in _manager.resolver.index[asset]:
-        print("  *", mod.mod_name)
-
-
-def _show_pkg(pkg_name):
-    candidates = list(filter(lambda p: p.name.find(pkg_name) != -1, _manager.packages))
-    if not len(candidates):
-        print("Package not found")
-        return
-    for candidate in candidates:
-        if sys.platform == "win32":
-            pstr = "Package: " + candidate.name
-        else:
-            pstr = "Package: " + _colors.OKGREEN + candidate.name + _colors.ENDC
-        print(pstr)
-        print("=" * len(pstr))
-        print("Path: " + candidate.path)
-        print("Module path: " + candidate.mod_path)
-        print()
-        print("Available modules:")
-        for mod in candidate.mods:
-            print("  *", mod.mod_name)
-        print()
-
-
-def _build_cat(args):
-    return _manager.build_catalogue(
-        args.cat_name, verbose=args.verbose, debug=args.debug, gpu=args.gpu
+    cookiecutter(
+        str((Path(__file__).parent / "packaging/cookiecutter-glia").resolve()),
     )
+
+
+@pkg.command(help="Add a mod file to the current package.")
+@click.argument(
+    "source",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.option(
+    "-w",
+    "--overwrite",
+    is_flag=True,
+    default=False,
+    help="Whether to overwrite if NMODL file exists at target location",
+)
+@click.option("-n", "--name", prompt=True, required=True, help="The asset name")
+@click.option(
+    "-t",
+    "--target",
+    default=None,
+    type=click.Path(dir_okay=False, path_type=Path),
+    help="The path relative to the package root to place the mod file.",
+)
+@click.option("-v", "--variant", default="0", help="The asset variant")
+@click.option(
+    "-l",
+    "--local",
+    is_flag=True,
+    default=False,
+    help="Add the NMODL asset to your local library",
+)
+def add(source, name, variant, overwrite, target, local):
+    path = Path(get_local_pkg_path() if local else ".")
+    if local and not path.exists():
+        create_local_package()
+    pkg = PackageManager(path)
+    mod_path = pkg.get_mod_dir(target)
+    if mod_path.is_dir():
+        mod_path /= f"{name}__{variant}.mod"
+    if not overwrite and mod_path.exists():
+        raise FileExistsError(f"Target mod file '{mod_path.resolve()}' already exists.")
+    mod = pkg.get_mod_from_source(source, name=name, variant=variant)
+    mod.relpath = pkg.get_rel_path(mod_path)
+    pkg.add_mod_file(source, mod)
+
+
+@pkg.command(help="Check for integrity problems with the package")
+def check():
+    pass

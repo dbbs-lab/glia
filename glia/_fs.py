@@ -1,11 +1,43 @@
+import datetime
 import json
 import os
+import typing
+import warnings
+from pathlib import Path
+from traceback import format_exception
 
 import appdirs
 
 from glia._hash import hash_path
 
 _install_dirs = appdirs.AppDirs(appname="Glia", appauthor="DBBS")
+
+LogLevel = typing.Union[
+    typing.Literal["log"], typing.Literal["warn"], typing.Literal["error"]
+]
+
+
+def log(message: str, *, level: LogLevel = None, category=None, exc: Exception = None):
+    log_path = Path(get_cache_path(f"{id('5')}.txt"))
+    if exc is not None and level is None:
+        level = "error"
+    if level:
+        level = level.upper()
+    header = " ".join(str(c) for c in (datetime.datetime.now(), level, category) if c)
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(log_path, "a") as f:
+        f.write(f"[{header}] {message}")
+        if exc:
+            f.write(":\n")
+            f.writelines(
+                "  " + "\n  ".join(line.split("\n"))
+                for line in format_exception(type(exc), exc, exc.__traceback__)
+            )
+            f.write("Exception arguments:\n")
+            f.writelines(f"  {a}\n" for a in exc.args)
+            warnings.warn(message + f". See the full log at '{log_path}'.")
+        else:
+            f.write("\n")
 
 
 def get_glia_path():
@@ -15,8 +47,7 @@ def get_glia_path():
 
 
 def get_cache_hash(prefix=""):
-    cache_slug = prefix + hash_path(get_glia_path())[:8]
-    return cache_slug
+    return prefix + hash_path(get_glia_path())[:8]
 
 
 def get_cache_path(*subfolders, prefix=""):
@@ -31,12 +62,14 @@ def get_data_path(*subfolders):
     return os.path.join(_install_dirs.user_data_dir, *subfolders)
 
 
-def get_mod_path(pkg):
-    return os.path.abspath(os.path.join(pkg.path, "mod"))
-
-
 def get_neuron_mod_path(*paths):
     return get_cache_path(*paths)
+
+
+def get_local_pkg_path():
+    from . import __version__
+
+    return get_data_path(__version__.split(".")[0], "local")
 
 
 def _read_shared_storage(*path):
@@ -44,7 +77,7 @@ def _read_shared_storage(*path):
     try:
         with open(_path, "r") as f:
             return json.load(f)
-    except IOError:
+    except (IOError, json.JSONDecodeError):
         return {}
 
 
@@ -87,7 +120,7 @@ def update_cache(cache_data):
     write_cache(cache)
 
 
-def create_cache():
+def clear_cache():
     empty_cache = {"mod_hashes": {}, "cat_hashes": {}}
     write_cache(empty_cache)
 

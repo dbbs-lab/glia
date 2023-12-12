@@ -1,14 +1,20 @@
 """
-NMODL Asset Manager.
+NMODL Asset Manager for Arbor and NEURON
+
+  ~ Glues your neurons together!
+
+Manage a local NMODL library that's automatically compiled, loaded, and recompiled
+whenever you change your NMODL code or simulator environment.
 """
 
-__version__ = "4.0.0b1"
+__version__ = "4.0.0b3"
 
+from ._fs import get_cache_path as _get_cache_path
 from ._glia import Glia, MechId
+from .assets import Catalogue, Mod, Package
 from .exceptions import *
 from .neuron import MechAccessor
 
-# Initialize the manager
 _manager = Glia()
 
 
@@ -93,3 +99,20 @@ def package(name):
     :type name: str
     """
     return _manager.package(name)
+
+
+def get_packages():
+    """
+    Return all installed packages.
+    """
+    return [*_manager.packages]
+
+
+def get_cache_path():
+    """
+    Get the cache path where intermediary files are stored.
+
+    Glia also stores a JSON cache in another directory, which
+    you won't find here, but ``glia cache --clear`` can reset.
+    """
+    return _get_cache_path()

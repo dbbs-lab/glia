@@ -1,22 +1,17 @@
-Glia is an asset manager for NEURON. It collects mod files from different pip packages and
-compiles them into a central library that is automatically loaded into NEURON. This
-removes the need for compiling folder after folder with cluttered, duplicated mod files
-and allows you to focus on using these mechanisms across multiple models.
+Glia is an NMODL asset manager. It can be used with Arbor and NEURON to automatically
+compile, build, and import assets at runtime. The asset manager caches compiled results
+and automatically recompiles it when the source code or environment changes.
 
 Packaging your mod files as a Glia package allows you to distribute them as dependencies
 of your Python models and delegates the installation, distribution, versioning and
-archiving of your assets to Python's packet manager pip.
-
-To create Glia packages, check out the CLI tool `Astrocyte
-<https://astrocyte.readthedocs.io/en/latest/>`_. Astrocyte also allows you to organize
-your personal mod collection!
+archiving of your assets to your favorite Python package manager.
 
 Usage
 =====
 
 Glia can be installed from pip::
 
-   pip install nrn-glia
+   pip install nmodl-glia
 
 Glia will check whether packages have been added, changed or removed  and will recompile
 and load the library if necessary. This means that except for importing Glia there's not
@@ -52,7 +47,7 @@ Double underscores in packages, assets or variant names are not allowed.
 
 This naming convention allows for multiple people to provide an implementation
 of the same asset, and by using variants even one package can provide multiple
-variations on the same mechanism. The default variant is ``0``
+variations on the same mechanism. The default variant is ``0``.
 
 If you install multiple packages that provide the same asset, or if you would like to
 specify another variant you will need to tell Glia which one you require. You can do so by
@@ -61,7 +56,7 @@ setting your asset preferences.
 Asset preferences
 =================
 
-There are 4 different scopes for providing asset preferences:
+There are 4 different scopes for providing asset preferences (from low to high priority):
 
 * **Global scope:** Selects a default mechanism asset everywhere.
 * **Script scope:** Selects a default mechanism asset for the remainder of the Python script.
@@ -76,9 +71,9 @@ Whenever you call ``glia.insert`` you can append your preferences for that inser
 
 .. code-block:: python
 
-   g.insert('Kv1', variant='high_activity', pkg='not_my_models')
+   g.insert('Kv1', variant='high_activity', pkg='some_package')
    # Equivalent to (note the extra parenthesis):
-   g.insert(('Kv1', 'high_activity', 'not_my_models'))
+   g.insert(('Kv1', 'high_activity', 'some_package'))
 
 Context scope
 ~~~~~~~~~~~~~
@@ -90,7 +85,7 @@ use the given package or variant:
 
    from patch import p
    s = p.Section()
-   with g.context(pkg='not_my_models'):
+   with g.context(pkg='some_package'):
      g.insert(s, 'Kv1')
      g.insert(s, 'Kv1', variant='high_activity')
 
@@ -101,7 +96,7 @@ You can also specify a dictionary with multiple asset-specific preferences:
    from patch import p
    s = p.Section()
    with g.context(assets={
-      'Kv1': {'package': 'not_my_models', 'variant': 'high_activity'},
+      'Kv1': {'package': 'some_package', 'variant': 'high_activity'},
       'HCN1': {'variant': 'revised'}
    }):
      g.insert(s, 'Kv1')
@@ -117,14 +112,25 @@ otherwise:
    from patch import p
    s = p.Section()
    with g.context(assets={
-      'Kv1': {'package': 'not_my_models', 'variant': 'high_activity'},
+      'Kv1': {'package': 'specific_preference', 'variant': 'high_activity'},
       'HCN1': {'variant': 'revised'}
-   }, package='some_pkg_name'):
+   }, package='base_preference'):
      g.insert(s, 'Kv1')
      g.insert(s, 'HCN1')
 
-Finally for those of you that have really crazy preferences you can even nest contexts,
-where the innermost preferences take priority.
+Contexts may be nested, where the innermost context takes precedence.
+
+.. warning::
+
+  When creating distribution-ready models, set up your models inside of a strict context,
+  with both package and variant explicitly set so that a user's Glia preferences do not
+  affect the reproducibility of your model.
+
+.. note::
+
+  When using models that set a strict context, the only way to adjust the mechanisms via
+  Glia is to import the package module before Glia, and to set ``package.mods = []``, so
+  that the context fails to find the mechanisms and Glia falls back on your mechanisms.
 
 Script scope
 ~~~~~~~~~~~~

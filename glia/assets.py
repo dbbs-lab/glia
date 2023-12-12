@@ -2,119 +2,113 @@ import os
 import shutil
 import subprocess
 import typing
+from pathlib import Path
 from tempfile import TemporaryDirectory, mkdtemp
 
 from . import _mpi
 from ._fs import get_cache_path, read_cache, update_cache
-from ._hash import get_directory_hash
+from ._hash import get_directory_hash, get_package_hash, get_package_mods_hash
 from .exceptions import *
 
 if typing.TYPE_CHECKING:
     import arbor
 
 
+class _ModList(list):
+    def __init__(self, package: "Package", *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.pkg = package
+        for item in self:
+            if not isinstance(item, Mod):
+                raise PackageFileError(f"Package mod '{item}' is not a valid `glia.Mod`.")
+            item.set_package(package)
+
+    def __setitem__(self, key, value):
+        if not isinstance(value, Mod):
+            raise PackageFileError(f"Package mod '{value}' is not a valid `glia.Mod`.")
+        super().__setitem__(key, value)
+        value.set_package(self.pkg)
+
+    def append(self, item):
+        item.set_package(self.pkg)
+        super().append(item)
+
+    def extend(self, itr):
+        super().extend(i.set_package(self.pkg) or i for i in itr)
+
+
 class Package:
-    def __init__(self, name, path, builtin=False):
-        self.name = name
-        self.path = path
-        self.mods = []
+    def __init__(self, name: str, root: Path, *, mods: list["Mod"] = None, builtin=False):
+        self._name = name
+        self._root = Path(root)
+        self.mods: list["Mod"] = _ModList(self, [] if mods is None else mods)
         # Exceptional flag for the NEURON builtins.
         # They need a definition to be `insert`ed,
         # but have no mod files to be compiled.
         self.builtin = builtin
 
-    @classmethod
-    def from_remote(cls, manager, advert):
-        try:
-            pkg = advert.package()
-        except Exception as e:
-            raise PackageError(
-                "Could not retrieve glia package from advertised object " + str(advert)
-            )
-        try:
-            p = cls(pkg.name, pkg.path)
-            p._load_remote_mods(pkg)
-        except AttributeError as e:
-            raise PackageError(
-                "Package '{}' is missing attributes:".format(advert.__name__)
-            )
-        return p
-
-    def _load_remote_mods(self, remote_pkg):
-        for mod in remote_pkg.mods:
-            self.mods.append(Mod.from_remote(self, mod))
+    @property
+    def name(self):
+        return self._name
 
     @property
-    def mod_path(self):
-        return os.path.abspath(os.path.join(self.path, "mod"))
+    def hash(self):
+        return get_package_hash(self)
+
+    @property
+    def mod_hash(self):
+        return get_package_mods_hash(self)
+
+    @property
+    def root(self):
+        return self._root
 
 
 class Mod:
     def __init__(
         self,
-        pkg,
-        name,
-        variant,
+        relpath: str,
+        asset_name,
+        *,
+        variant="0",
         is_point_process=False,
         is_artificial_cell=False,
+        dialect: typing.Union[typing.Literal["arbor"], typing.Literal["neuron"]] = None,
         builtin=False,
     ):
-        self.pkg = pkg
-        self.pkg_name = pkg.name
-        self.namespace = "glia__" + pkg.name
-        self.asset_name = name
+        self._pkg: typing.Optional[Package] = None
+        self.relpath = relpath
+        self.asset_name = asset_name
         self.variant = variant
         self.is_point_process = is_point_process
         self.is_artificial_cell = is_artificial_cell
+        self.dialect = dialect
         self.builtin = builtin
 
-    @classmethod
-    def from_remote(cls, package, remote_object):
-        excluded = ["pkg_name", "asset_name", "namespace", "pkg", "_name_statement"]
-        key_map = {
-            "asset_name": "name",
-            "_is_point_process": "is_point_process",
-            "_is_artificial_cell": "is_artificial_cell",
-        }
-        required = ["asset_name", "variant"]
-        kwargs = {}
-        # Copy over allowed
-        for key, value in remote_object.__dict__.items():
-            if key not in excluded:
-                kwargs[key if key not in key_map else key_map[key]] = value
-        for remote_attr in required:
-            local_attr = (
-                remote_attr if remote_attr not in key_map else key_map[remote_attr]
-            )
-            try:
-                kwargs[local_attr] = remote_object.__dict__[remote_attr]
-            except KeyError as e:
-                e_str = "A mod"
-                if "name" in kwargs:
-                    e_str = kwargs["name"]
-                raise PackageModError(
-                    e_str
-                    + " in {} did not specify required attribute '{}'.".format(
-                        package.name, remote_attr
-                    )
-                )
-        try:
-            return cls(package, **kwargs)
-        except TypeError as e:
-            attr = str(e)[str(e).find("'") : -1]
-            raise PackageModError(
-                "Mod specified an unknown attribute {}'".format(attr)
-            ) from None
+    def set_package(self, package: Package):
+        self._pkg = package
+
+    @property
+    def pkg(self):
+        return self._pkg
+
+    @property
+    def pkg_name(self):
+        return self._pkg.name
+
+    @property
+    def mech_id(self):
+        return (self.asset_name, self.variant, self.pkg_name)
 
     @property
     def mod_name(self):
         if self.builtin:
             return self.asset_name
-        return "{}__{}__{}".format(self.namespace, self.asset_name, self.variant)
+        return f"glia__{self.pkg_name}__{self.asset_name}__{self.variant}"
 
     @property
-    def mod_path(self):
-        return os.path.abspath(os.path.join(self.pkg.mod_path, self.mod_name + ".mod"))
+    def path(self) -> Path:
+        return self.pkg.root / self.relpath
 
 
 class Catalogue:
@@ -166,7 +160,10 @@ class Catalogue:
     def build(self, verbose=None, debug=False, gpu=None):
         # Turn verbosity on if debug is on, unless it's explicitly toggled off.
         verbose = False if verbose is False else verbose or debug
-        run_build = lambda: self._build_local(verbose, debug, gpu)
+
+        def run_build():
+            self._build_local(verbose, debug, gpu)
+
         build_err = None
         try:
             if _mpi.main_node:
@@ -229,7 +226,8 @@ class Catalogue:
             os.chdir(pwd)
             if debug:
                 print(f"Debug copy of catalogue in '{tmp}'")
-        # Cache directory hash of current mod files so we only rebuild on source code changes.
+        # Cache directory hash of current mod files so we only rebuild on source code
+        # changes.
         cache_data = read_cache()
         cat_hashes = cache_data.setdefault("cat_hashes", dict())
         cat_hashes[self._name] = self._hash()

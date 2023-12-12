@@ -1,15 +1,14 @@
-import importlib.util
 import os
 import unittest
 
+from patch import p
+
 import glia._glia
 from glia._fs import read_cache
+from tests._shared import skipUnlessTestMods
 
 
-@unittest.skipIf(
-    not importlib.util.find_spec("glia_test_mods"),
-    "Package discovery should be tested with the `glia_test_mods` package installed.",
-)
+@skipUnlessTestMods
 class TestPackageDiscovery(unittest.TestCase):
     """
     Check if packages can be discovered.
@@ -18,52 +17,60 @@ class TestPackageDiscovery(unittest.TestCase):
     def test_discovery(self):
         self.assertGreater(len(glia._manager.packages), 0)
 
-    def test_caching(self):
-        cache = read_cache()
-        # Check whether the directory hash for `glia_test_mods` is present.
-        self.assertTrue(
-            any(["glia_test_mods" in hash for hash in cache["mod_hashes"].keys()])
-        )
 
-
+@skipUnlessTestMods
 class TestCompilation(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        import glia
-
         glia.compile()
 
-    def test_compilation(self):
-        import glia
+    def test_caching(self):
+        # Test whether the compilation was cached
+        cache = read_cache()
+        pkg = glia._manager.package("glia_test_mods")
+        self.assertEqual(pkg.mod_hash, cache["mod_hashes"].get(pkg.hash))
 
+    def test_compilation(self):
         # Check that the library files exist
         for path in glia._manager.get_libraries():
             with self.subTest(path=path):
                 self.assertTrue(os.path.exists(path), "Missing library file")
 
     def test_insert(self):
-        from patch import p
-
-        import glia as g
-
         # Test mechanism insertion
-        self.assertEqual(type(g.insert(p.Section(), "cdp5")), glia._glia.MechAccessor)
-        self.assertTrue(g._manager.test_mechanism("cdp5"))
-        self.assertTrue(g._manager.test_mechanism("Kir2_3"))
+        mech = glia._manager.insert(p.Section(), "Na")
+        self.assertIsInstance(mech, glia._glia.MechAccessor)
+        self.assertTrue(glia._manager.test_mechanism("AMPA"))
+        self.assertTrue(glia._manager.test_mechanism("Na"))
 
+    def test_insert_attrs(self):
         # Test mechanism attributes
-        g._manager.insert(p.Section(), "Kir2_3", attributes={"gkbar": 30})
+        sec = p.Section()
+        mech = glia._manager.insert(sec, "Na", attributes={"gnabar": 30})
+        self.assertEqual(30, mech.get_parameter("gnabar"), "Attribute not set")
         self.assertRaises(
             AttributeError,
-            g._manager.insert,
+            glia._manager.insert,
             p.Section(),
-            "Kir2_3",
+            "Na",
             attributes={"doesntexist": 30},
         )
 
-        # TODO: Test point process insertion
-        # TODO: Test point process attribute setting
+    def test_insert_pp(self):
+        # Test point process insertion
+        pp = glia._manager.insert(p.Section(), "AMPA")
+        self.assertIsInstance(pp, glia._glia.MechAccessor)
+
+    def test_insert_pp_attrs(self):
+        glia._manager.insert(p.Section(), "AMPA", attributes={"U": 30})
+        self.assertRaises(
+            AttributeError,
+            glia._manager.insert,
+            p.Section(),
+            "AMPA",
+            attributes={"doesntexist": 30},
+        )
 
 
 class TestBuiltins(unittest.TestCase):

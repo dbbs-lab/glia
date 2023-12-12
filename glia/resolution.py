@@ -8,6 +8,7 @@ from contextlib import contextmanager
 
 from ._fs import read_preferences, write_preferences
 from .exceptions import (
+    AssetLookupError,
     NoMatchesError,
     ResolveError,
     TooManyMatchesError,
@@ -110,8 +111,8 @@ class Resolver:
             return None
 
     def lookup(self, mod_name):
-        if not mod_name in self._reverse_lookup:
-            raise LookupError("No mod with name '{}' found".format(mod_name))
+        if mod_name not in self._reverse_lookup:
+            raise AssetLookupError("No mod with name '{}' found".format(mod_name))
         else:
             return self._reverse_lookup[mod_name]
 

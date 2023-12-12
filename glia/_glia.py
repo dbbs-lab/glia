@@ -1,25 +1,28 @@
 import os
+import shutil
 import subprocess
 import sys
 import typing
 import warnings
 from functools import lru_cache, wraps
-from importlib.metadata import entry_points
+from pathlib import Path
 from shutil import copy2 as copy_file
 from shutil import rmtree as rmdir
 
+from importlib_metadata import entry_points
+
 from . import _mpi
 from ._fs import (
-    create_cache,
+    clear_cache,
     create_preferences,
     get_cache_path,
     get_data_path,
-    get_mod_path,
     get_neuron_mod_path,
+    log,
     read_cache,
     update_cache,
 )
-from ._hash import get_directory_hash
+from ._local import create_local_package
 from .assets import Catalogue, Mod, Package
 from .exceptions import (
     CatalogueError,
@@ -84,26 +87,33 @@ class Glia:
 
     @property
     @lru_cache(maxsize=1)
-    def packages(self) -> typing.List[Package]:
+    def packages(self):
+        return self.discover_packages()
+
+    def discover_packages(self) -> typing.List[Package]:
         packages = []
-        for pkg_ptr in entry_points().get("glia.package", []):
-            advert = pkg_ptr.load()
-            self.entry_points.append(advert)
-            packages.append(Package.from_remote(self, advert))
+        eps = entry_points()
+        for pkg_ptr in eps.select(group="glia.package"):
+            self.entry_points.append(pkg_ptr)
+            try:
+                packages.append(pkg_ptr.load())
+            except Exception as e:
+                log(f"Could not load package '{pkg_ptr.name}'", exc=e)
         return packages
 
     @property
     @lru_cache(maxsize=1)
     def catalogues(self) -> typing.Mapping[str, Catalogue]:
         catalogues = {}
-        for pkg_ptr in entry_points().get("glia.catalogue", []):
+        eps = entry_points()
+        for pkg_ptr in eps.select(group="glia.catalogue"):
             advert = pkg_ptr.load()
-            self.entry_points.append(advert)
+            self.entry_points.append(pkg_ptr)
             if advert.name in catalogues:
                 raise RuntimeError(
                     f"Duplicate installations of `{advert.name}` catalogue:"
-                    + f"\n{catalogues[advert.name].path}"
-                    + f"\n{advert.path}"
+                    + f"\n{catalogues[advert.name].FIXMEpath}"
+                    + f"\n{advert.FIXMEpath}"
                 )
             catalogues[advert.name] = advert
         return catalogues
@@ -128,7 +138,7 @@ class Glia:
         self.compile(check_cache=True)
 
     @_requires_install
-    def package(self, name):
+    def package(self, name) -> Package:
         for pkg in self.packages:
             if pkg.name == name:
                 return pkg
@@ -159,16 +169,16 @@ class Glia:
 
     @_requires_install
     def _compile(self):
-        assets, mod_files, cache_data = self._collect_asset_state()
+        assets, cache_data = self._precompile_cache()
         if _should_skip_compile():
             return update_cache(cache_data)
-        if len(mod_files) == 0:
+        if len(assets) == 0:
             return
         neuron_mod_path = get_neuron_mod_path()
         _remove_tree(neuron_mod_path)
         # Copy over fresh mods
-        for file in mod_files:
-            copy_file(file, neuron_mod_path)
+        for asset in assets:
+            copy_file(asset.path, neuron_mod_path)
         # Platform specific compile
         if sys.platform == "win32":
             self._compile_nrn_windows(neuron_mod_path)
@@ -215,22 +225,17 @@ class Glia:
         if process.returncode != 0:
             raise CompileError(stderr.decode("UTF-8"))
 
-    def _collect_asset_state(self):
+    def _precompile_cache(self):
         cache_data = read_cache()
-        mod_files = []
         assets = []
         # Iterate over all discovered packages to collect the mod files.
         for pkg in self.packages:
             if pkg.builtin:
                 continue
-            mod_path = get_mod_path(pkg)
-            for mod in pkg.mods:
-                assets.append((pkg, mod))
-                mod_file = mod.mod_path
-                mod_files.append(mod_file)
-            # Hash mod directories and their contents to update the cache data.
-            cache_data["mod_hashes"][pkg.path] = get_directory_hash(mod_path)
-        return assets, mod_files, cache_data
+            assets.extend(pkg.mods)
+            # Update the package's hash to the current modfile contents
+            cache_data["mod_hashes"][pkg.hash] = pkg.mod_hash
+        return assets, cache_data
 
     def _resolve_mod(self, asset, variant=None, pkg=None):
         if isinstance(asset, str) and asset.startswith("glia__"):
@@ -252,7 +257,11 @@ class Glia:
         """
         try:
             s = self.h.Section()
-            self.insert(s, mechanism)
+            mod = self._resolve_mod(mechanism)
+            if mod.is_artificial_cell:
+                getattr(self.h, mod.mod_name)
+            else:
+                self.insert(s, mechanism)
         except ValueError as e:
             if str(e).find("argument not a density mechanism name") != -1:
                 raise LibraryError(mechanism + " mechanism could not be inserted.")
@@ -397,12 +406,11 @@ class Glia:
     def is_cache_fresh(self) -> bool:
         try:
             cache_data = read_cache()
-            hashes = cache_data["mod_hashes"]
+            mod_hashes = cache_data["mod_hashes"]
             for pkg in self.packages:
-                if pkg.path not in hashes:
+                if pkg.hash not in mod_hashes:
                     return False
-                hash = get_directory_hash(os.path.join(pkg.path, "mod"))
-                if hash != hashes[pkg.path]:
+                if pkg.mod_hash != mod_hashes[pkg.hash]:
                     return False
             return True
         except FileNotFoundError as _:
@@ -416,9 +424,13 @@ class Glia:
         return _installed
 
     def _install_self(self):
+        # Shared data path install
         os.makedirs(get_data_path(), exist_ok=True)
-        create_cache()
+        clear_cache()
         create_preferences()
+        create_local_package()
+        # Environment cache path install
+        shutil.rmtree(get_cache_path(), ignore_errors=True)
         os.makedirs(get_cache_path(), exist_ok=True)
         self._resolver = Resolver(self)
         self.compile()
@@ -433,7 +445,7 @@ class Glia:
             import patch
             from patch import is_density_mechanism, is_point_process
 
-            nrn_pkg = Package("NEURON", neuron.__path__[0], builtin=True)
+            nrn_pkg = Package("NEURON", Path(neuron.__path__[0]), builtin=True)
             builtin_mechs = []
             # Get all the builtin mechanisms by triggering a TypeError (NEURON 7.7 or
             # below) Or by it being a "DensityMechanism" (NEURON 7.8 or above)
@@ -443,24 +455,13 @@ class Glia:
                 elif is_point_process(key):
                     builtin_mechs.append((key, True))
             for mech, point_process in builtin_mechs:
-                mod = Mod(nrn_pkg, mech, 0, builtin=True, is_point_process=point_process)
+                mod = Mod(
+                    None, mech, variant=0, builtin=True, is_point_process=point_process
+                )
                 nrn_pkg.mods.append(mod)
             self.packages.append(nrn_pkg)
             if self.resolver:
                 self.resolver.construct_index()
-
-    @_requires_install
-    def list_assets(self):
-        print(
-            "Assets:",
-            ", ".join(
-                map(
-                    lambda e: e.name + " (" + str(len(e)) + ")",
-                    self.resolver.index.values(),
-                )
-            ),
-        )
-        print("Packages:", ", ".join(map(lambda p: p.name, self.packages)))
 
 
 def _transform(obj):
