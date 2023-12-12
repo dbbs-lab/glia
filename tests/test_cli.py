@@ -90,7 +90,7 @@ class TestCLI(unittest.TestCase):
 
     @_shared.skipUnlessTestMods
     def test_test_unknown(self):
-        result = run_cli_command(["test", "unknown"], xfail=True)
+        result = run_cli_command(["test", "unknown"])
         self.assertIn("[?] unknown", result.output)
         self.assertEqual(1, result.exit_code)
 
