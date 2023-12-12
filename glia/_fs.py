@@ -33,6 +33,8 @@ def log(message: str, *, level: LogLevel = None, category=None, exc: Exception =
                 "  " + "\n  ".join(line.split("\n"))
                 for line in format_exception(type(exc), exc, exc.__traceback__)
             )
+            f.write("Exception arguments:\n")
+            f.writelines(f"  {a}\n" for a in exc.args)
             warnings.warn(message + f". See the full log at '{log_path}'.")
         else:
             f.write("\n")
@@ -62,6 +64,12 @@ def get_data_path(*subfolders):
 
 def get_neuron_mod_path(*paths):
     return get_cache_path(*paths)
+
+
+def get_local_pkg_path():
+    from . import __version__
+
+    return get_data_path(__version__.split(".")[0], "local")
 
 
 def _read_shared_storage(*path):

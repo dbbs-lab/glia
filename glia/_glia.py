@@ -1,9 +1,11 @@
 import os
+import shutil
 import subprocess
 import sys
 import typing
 import warnings
 from functools import lru_cache, wraps
+from pathlib import Path
 from shutil import copy2 as copy_file
 from shutil import rmtree as rmdir
 
@@ -20,6 +22,7 @@ from ._fs import (
     read_cache,
     update_cache,
 )
+from ._local import create_local_package
 from .assets import Catalogue, Mod, Package
 from .exceptions import (
     CatalogueError,
@@ -421,9 +424,13 @@ class Glia:
         return _installed
 
     def _install_self(self):
+        # Shared data path install
         os.makedirs(get_data_path(), exist_ok=True)
         clear_cache()
         create_preferences()
+        create_local_package()
+        # Environment cache path install
+        shutil.rmtree(get_data_path(), ignore_errors=True)
         os.makedirs(get_cache_path(), exist_ok=True)
         self._resolver = Resolver(self)
         self.compile()
@@ -438,7 +445,7 @@ class Glia:
             import patch
             from patch import is_density_mechanism, is_point_process
 
-            nrn_pkg = Package("NEURON", neuron.__path__[0], builtin=True)
+            nrn_pkg = Package("NEURON", Path(neuron.__path__[0]), builtin=True)
             builtin_mechs = []
             # Get all the builtin mechanisms by triggering a TypeError (NEURON 7.7 or
             # below) Or by it being a "DensityMechanism" (NEURON 7.8 or above)
