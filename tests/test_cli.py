@@ -45,7 +45,6 @@ class TestCLI(unittest.TestCase):
     @_shared.skipParallel
     @_shared.skipUnlessTestMods
     def test_compile(self):
-        # todo: test this test
         result = run_cli_command(["compile"])
         self.assertEqual(0, result.exit_code)
         self.assertRegex(result.output, r"(\d+) out of (\1) passed")
@@ -53,7 +52,6 @@ class TestCLI(unittest.TestCase):
     @_shared.skipParallel
     @_shared.skipIfInstalled()
     def test_compile_nopkg(self):
-        # todo: test this test
         result = run_cli_command(["compile"])
         self.assertEqual(0, result.exit_code)
         self.assertRegex(result.output, r"0 out of 0 passed")
@@ -64,7 +62,6 @@ class TestCLI(unittest.TestCase):
 
     @_shared.skipUnlessTestMods
     def test_show(self):
-        # todo: test this test
         result = run_cli_command(["show", "AMPA"])
         self.assertEqual(0, result.exit_code)
 
@@ -90,7 +87,7 @@ class TestCLI(unittest.TestCase):
 
     @_shared.skipUnlessTestMods
     def test_test_unknown(self):
-        result = run_cli_command(["test", "unknown"])
+        result = run_cli_command(["test", "unknown"], xfail=True)
         self.assertIn("[?] unknown", result.output)
         self.assertEqual(1, result.exit_code)
 

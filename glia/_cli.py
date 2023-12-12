@@ -98,6 +98,7 @@ def show_pkg(package):
 @glia.command(help="Test mechanisms")
 @click.argument("mechanisms", nargs=-1)
 def test(mechanisms, verbose=False):
+    print("BUT WE SHOULD GET MECHANISMS???", mechanisms)
     if len(mechanisms) == 0:
         mechanisms = _manager.resolver.index.keys()
     successes = 0
