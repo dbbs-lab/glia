@@ -16,7 +16,7 @@ Welcome to Glia Packet Manager's documentation!
    :alt: Black Formatting
 
 .. image:: https://readthedocs.org/projects/nrn-glia/badge/?version=latest
-   :target: https://nrn-glia.readthedocs.io/en/latest/?badge=latest
+   :target: https://nmodl-glia.readthedocs.io/en/latest/?badge=latest
    :alt: Documentation Status
 
 .. toctree::
