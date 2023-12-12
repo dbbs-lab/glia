@@ -1,4 +1,4 @@
-nrn-patch==4.0.0b2
+nrn-patch==4.0.0b3
 requests>=2.31.0
 errr==1.2.0
 mpi4py==3.1.5
