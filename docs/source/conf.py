@@ -61,4 +61,4 @@ exclude_patterns = []
 #
 html_theme = "sphinx_rtd_theme"
 
-autodoc_mock_imports = ["patch", "mpi4py"]
+autodoc_mock_imports = ["patch", "mpi4py", "errr"]
