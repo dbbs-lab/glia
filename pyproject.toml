@@ -16,7 +16,8 @@ dependencies= [
     "cookiecutter~=2.0",
     "black>=23.0.0",
     "toml~=0.10",
-    "nmodl~=0.5;sys_platform != 'win32'"
+    "nmodl~=0.5;sys_platform != 'win32'",
+    "importlib_metadata~=6.5"
 ]
 
 [tool.flit.module]
