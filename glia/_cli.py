@@ -4,7 +4,8 @@ from pathlib import Path
 import click
 
 from . import _manager, _mpi
-from ._fs import clear_cache, get_cache_path
+from ._fs import clear_cache, get_cache_path, get_local_pkg_path
+from ._local import create_local_package
 from .exceptions import *
 from .packaging import PackageManager
 
@@ -14,7 +15,7 @@ def glia():
     pass
 
 
-@glia.command()
+@glia.command(help="Compile the Glia library")
 def compile():
     if _mpi.main_node:
         click.echo("Glia is compiling...")
@@ -33,7 +34,7 @@ def compile():
     test(_manager.resolver.index.keys(), standalone_mode=False)
 
 
-@glia.command("list")
+@glia.command("list", help="List installed components")
 def list_assets():
     click.echo(
         "Assets: "
@@ -127,17 +128,30 @@ def test(mechanisms, verbose=False):
         click.echo(f"Tests finished: {successes} out of {tests} passed")
 
 
-@glia.command()
+@glia.command(help="Build an Arbor catalogue")
 @click.argument("catalogue")
-@click.option("-v", "--verbose", is_flag=True, default=False)
-@click.option("-d", "--debug", is_flag=True, default=False)
-@click.option("--gpu/--cpu", default=False)
+@click.option(
+    "-v", "--verbose", is_flag=True, default=False, help="Show catalogue build output."
+)
+@click.option(
+    "-d",
+    "--debug",
+    is_flag=True,
+    default=False,
+    help="Build in debug mode to inspect build intermediates.",
+)
+@click.option("--gpu/--cpu", default=False, help="Build catalogue for GPU.")
 def build(catalogue, verbose, debug, gpu):
     _manager.build_catalogue(catalogue, verbose=verbose, debug=debug, gpu=gpu)
 
 
 @glia.command(help="Show or clear the cache path used in the current environment")
-@click.option("--clear", is_flag=True, default=False)
+@click.option(
+    "--clear",
+    is_flag=True,
+    default=False,
+    help="Clear the cached JSON data and cache directory.",
+)
 def cache(clear):
     click.echo(get_cache_path())
     if clear:
@@ -160,14 +174,38 @@ def new():
 
 
 @pkg.command(help="Add a mod file to the current package.")
-@click.argument("source", type=click.Path(exists=True, dir_okay=False))
-@click.option("-w", "--overwrite", is_flag=True, default=False)
-@click.option("-n", "--name", prompt=True, required=True)
-@click.option("-t", "--target", default=None, type=click.Path(dir_okay=False))
-@click.option("-v", "--variant", default="0")
-def add(source, name, variant, overwrite, target):
-    source = Path(source)
-    pkg = PackageManager(Path())
+@click.argument(
+    "source",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.option(
+    "-w",
+    "--overwrite",
+    is_flag=True,
+    default=False,
+    help="Whether to overwrite if NMODL file exists at target location",
+)
+@click.option("-n", "--name", prompt=True, required=True, help="The asset name")
+@click.option(
+    "-t",
+    "--target",
+    default=None,
+    type=click.Path(dir_okay=False, path_type=Path),
+    help="The path relative to the package root to place the mod file.",
+)
+@click.option("-v", "--variant", default="0", help="The asset variant")
+@click.option(
+    "-l",
+    "--local",
+    is_flag=True,
+    default=False,
+    help="Add the NMODL asset to your local library",
+)
+def add(source, name, variant, overwrite, target, local):
+    path = Path(get_local_pkg_path() if local else ".")
+    if local and not path.exists():
+        create_local_package()
+    pkg = PackageManager(path)
     mod_path = pkg.get_mod_dir(target)
     if mod_path.is_dir():
         mod_path /= f"{name}__{variant}.mod"
