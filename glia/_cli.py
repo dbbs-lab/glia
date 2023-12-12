@@ -102,6 +102,7 @@ def test(mechanisms, verbose=False):
         mechanisms = _manager.resolver.index.keys()
     successes = 0
     tests = len(mechanisms)
+    ecode = 0
     for mechanism in mechanisms:
         mstr = "[OK]"
         estr = ""
@@ -111,8 +112,10 @@ def test(mechanisms, verbose=False):
         except LibraryError as e:
             mstr = "[ERROR]"
             estr = str(e)
+            ecode = 1
         except UnknownAssetError as _:
             mstr = "[?]"
+            ecode = 1
         except TooManyMatchesError as e:
             mstr = "[MULTI]"
             estr = str(e)
@@ -126,6 +129,7 @@ def test(mechanisms, verbose=False):
                 click.echo("  -- " + estr)
     if _mpi.main_node:
         click.echo(f"Tests finished: {successes} out of {tests} passed")
+    exit(ecode)
 
 
 @glia.command(help="Build an Arbor catalogue")

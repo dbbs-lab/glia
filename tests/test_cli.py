@@ -84,6 +84,16 @@ class TestCLI(unittest.TestCase):
         self.assertIn('Unknown PACKAGE "doesntexist"', result.output)
         self.assertEqual(2, result.exit_code)
 
+    @_shared.skipUnlessTestMods
+    def test_test(self):
+        result = run_cli_command(["test", "Na"])
+
+    @_shared.skipUnlessTestMods
+    def test_test_unknown(self):
+        result = run_cli_command(["test", "unknown"], xfail=True)
+        self.assertIn("[?] unknown", result.output)
+        self.assertEqual(1, result.exit_code)
+
     def test_cache(self):
         result = run_cli_command(["cache"])
         self.assertIn(
