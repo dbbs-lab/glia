@@ -42,7 +42,7 @@ class TestCLI(unittest.TestCase):
         self.assertNotEqual("", result.output, "Should show help message")
         self.assertEqual(0, result.exit_code)
 
-    @unittest.skipIf(glia._mpi.parallel_run, "Skip in parallel")
+    @_shared.skipParallel
     @_shared.skipUnlessTestMods
     def test_compile(self):
         # todo: test this test
@@ -50,7 +50,7 @@ class TestCLI(unittest.TestCase):
         self.assertEqual(0, result.exit_code)
         self.assertRegex(result.output, r"(\d+) out of (\1) passed")
 
-    @unittest.skipIf(glia._mpi.parallel_run, "Skip in parallel")
+    @_shared.skipParallel
     @_shared.skipIfInstalled()
     def test_compile_nopkg(self):
         # todo: test this test
@@ -90,6 +90,7 @@ class TestCLI(unittest.TestCase):
             glia._fs._install_dirs.user_cache_dir, result.output, "wrong cache dir"
         )
 
+    @_shared.skipParallel
     def test_cache_clear(self):
         pre_test = glia._fs.read_cache()
         with TemporaryDirectory() as tmp:
