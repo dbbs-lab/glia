@@ -98,7 +98,6 @@ def show_pkg(package):
 @glia.command(help="Test mechanisms")
 @click.argument("mechanisms", nargs=-1)
 def test(mechanisms, verbose=False):
-    print("BUT WE SHOULD GET MECHANISMS???", mechanisms)
     if len(mechanisms) == 0:
         mechanisms = _manager.resolver.index.keys()
     successes = 0
@@ -123,11 +122,9 @@ def test(mechanisms, verbose=False):
         except AssetLookupError as e:
             mstr = "[X]"
             estr = str(e)
-        if _mpi.main_node:
-            click.echo(f"{mstr} {mechanism}")
+        click.echo(f"{mstr} {mechanism}")
         if verbose and estr != "":
-            if _mpi.main_node:
-                click.echo("  -- " + estr)
+            click.echo("  -- " + estr)
     if _mpi.main_node:
         click.echo(f"Tests finished: {successes} out of {tests} passed")
     exit(ecode)
