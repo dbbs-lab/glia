@@ -1,13 +1,16 @@
 import importlib.util
 import os
+import shutil
 import unittest
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
 from click.testing import CliRunner
 
 import glia._cli
+import glia._fs
 import glia._mpi
-from glia import Mod, Package
+from glia import Mod, Package, get_cache_path
 
 from . import _shared
 
@@ -80,6 +83,25 @@ class TestCLI(unittest.TestCase):
         result = run_cli_command(["show-pkg", "doesntexist"], xfail=True)
         self.assertIn('Unknown PACKAGE "doesntexist"', result.output)
         self.assertEqual(2, result.exit_code)
+
+    def test_cache(self):
+        result = run_cli_command(["cache"])
+        self.assertIn(
+            glia._fs._install_dirs.user_cache_dir, result.output, "wrong cache dir"
+        )
+
+    def test_cache_clear(self):
+        pre_test = glia._fs.read_cache()
+        with TemporaryDirectory() as tmp:
+            shutil.copytree(get_cache_path(), tmp, dirs_exist_ok=True)
+            try:
+                glia._fs.write_cache({"test_key": "test_value"})
+                result = run_cli_command(["cache", "--clear"])
+                self.assertFalse(Path(get_cache_path()).exists(), "cache dir not removed")
+                self.assertNotIn("test_key", glia._fs.read_cache(), "cache not cleared")
+            finally:
+                glia._fs.write_cache(pre_test)
+                shutil.copytree(tmp, get_cache_path(), dirs_exist_ok=True)
 
 
 class TestPackagingCLI(unittest.TestCase):

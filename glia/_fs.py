@@ -112,7 +112,7 @@ def update_cache(cache_data):
     write_cache(cache)
 
 
-def create_cache():
+def clear_cache():
     empty_cache = {"mod_hashes": {}, "cat_hashes": {}}
     write_cache(empty_cache)
 

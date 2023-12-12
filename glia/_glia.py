@@ -11,7 +11,7 @@ from importlib_metadata import entry_points
 
 from . import _mpi
 from ._fs import (
-    create_cache,
+    clear_cache,
     create_preferences,
     get_cache_path,
     get_data_path,
@@ -422,7 +422,7 @@ class Glia:
 
     def _install_self(self):
         os.makedirs(get_data_path(), exist_ok=True)
-        create_cache()
+        clear_cache()
         create_preferences()
         os.makedirs(get_cache_path(), exist_ok=True)
         self._resolver = Resolver(self)

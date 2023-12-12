@@ -1,8 +1,10 @@
+import shutil
 from pathlib import Path
 
 import click
 
 from . import _manager, _mpi
+from ._fs import clear_cache, get_cache_path
 from .exceptions import *
 from .packaging import PackageManager
 
@@ -132,6 +134,15 @@ def test(mechanisms, verbose=False):
 @click.option("--gpu/--cpu", default=False)
 def build(catalogue, verbose, debug, gpu):
     _manager.build_catalogue(catalogue, verbose=verbose, debug=debug, gpu=gpu)
+
+
+@glia.command(help="Show or clear the cache path used in the current environment")
+@click.option("--clear", is_flag=True, default=False)
+def cache(clear):
+    click.echo(get_cache_path())
+    if clear:
+        clear_cache()
+        shutil.rmtree(get_cache_path())
 
 
 @glia.group(help="All commands related to packaging your NMODL files for others")
