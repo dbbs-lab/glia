@@ -7,7 +7,7 @@ Manage a local NMODL library that's automatically compiled, loaded, and recompil
 whenever you change your NMODL code or simulator environment.
 """
 
-__version__ = "4.0.0b2"
+__version__ = "4.0.0b3"
 
 from ._glia import Glia, MechId
 from .assets import Catalogue, Mod, Package
