@@ -36,9 +36,10 @@ jobs:
     - name: Install dependencies & self
       run: |
         python -m pip install --upgrade pip
+        pip install -e . --no-deps
         pip install -r requirements.txt --prefer-binary
-        pip install NEURON==${{ matrix.nrn }}
         pip install -e .
+        pip install NEURON==${{ matrix.nrn }}
     - name: Run package-free tests
       run: coverage run -p -m unittest -v
     - name: Install test package
