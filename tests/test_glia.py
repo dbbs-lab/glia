@@ -18,6 +18,7 @@ class TestPackageDiscovery(unittest.TestCase):
         self.assertGreater(len(glia._manager.packages), 0)
 
 
+@skipUnlessTestMods
 class TestCompilation(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -36,7 +37,6 @@ class TestCompilation(unittest.TestCase):
             with self.subTest(path=path):
                 self.assertTrue(os.path.exists(path), "Missing library file")
 
-    @skipUnlessTestMods
     def test_insert(self):
         # Test mechanism insertion
         mech = glia._manager.insert(p.Section(), "Na")
@@ -44,7 +44,6 @@ class TestCompilation(unittest.TestCase):
         self.assertTrue(glia._manager.test_mechanism("AMPA"))
         self.assertTrue(glia._manager.test_mechanism("Na"))
 
-    @skipUnlessTestMods
     def test_insert_attrs(self):
         # Test mechanism attributes
         sec = p.Section()
@@ -58,13 +57,11 @@ class TestCompilation(unittest.TestCase):
             attributes={"doesntexist": 30},
         )
 
-    @skipUnlessTestMods
     def test_insert_pp(self):
         # Test point process insertion
         pp = glia._manager.insert(p.Section(), "AMPA")
         self.assertIsInstance(pp, glia._glia.MechAccessor)
 
-    @skipUnlessTestMods
     def test_insert_pp_attrs(self):
         glia._manager.insert(p.Section(), "AMPA", attributes={"U": 30})
         self.assertRaises(
