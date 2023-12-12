@@ -4,9 +4,10 @@ import sys
 import typing
 import warnings
 from functools import lru_cache, wraps
-from importlib.metadata import entry_points
 from shutil import copy2 as copy_file
 from shutil import rmtree as rmdir
+
+from importlib_metadata import entry_points
 
 from . import _mpi
 from ._fs import (
@@ -35,11 +36,6 @@ _installed = None
 MechId = typing.Union[
     str, typing.Tuple[str], typing.Tuple[str, str], typing.Tuple[str, str, str]
 ]
-
-
-class _EntryPointsPatch(dict):
-    def select(self, name):
-        return self.get(name, [])
 
 
 def _requires_install(func):
@@ -94,8 +90,6 @@ class Glia:
     def discover_packages(self) -> typing.List[Package]:
         packages = []
         eps = entry_points()
-        if not hasattr(eps, "select"):
-            eps = _EntryPointsPatch(eps)
         for pkg_ptr in eps.select(group="glia.package"):
             self.entry_points.append(pkg_ptr)
             try:
@@ -109,8 +103,6 @@ class Glia:
     def catalogues(self) -> typing.Mapping[str, Catalogue]:
         catalogues = {}
         eps = entry_points()
-        if not hasattr(eps, "select"):
-            eps = _EntryPointsPatch(eps)
         for pkg_ptr in eps.select(group="glia.catalogue"):
             advert = pkg_ptr.load()
             self.entry_points.append(pkg_ptr)
