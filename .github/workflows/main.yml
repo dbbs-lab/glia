@@ -48,5 +48,9 @@ jobs:
       run: coverage run -p -m unittest -v
     - name: Run parallel tests
       run: mpiexec -n 2 coverage run -p -m unittest -v
+    - name: Test local package
+      run: |
+        glia pkg add ./tests/data/mods/Na.mod --local
+        glia compile
     - name: Upload coverage reports
       run: bash <(curl -s https://codecov.io/bash)
