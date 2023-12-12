@@ -430,7 +430,7 @@ class Glia:
         create_preferences()
         create_local_package()
         # Environment cache path install
-        shutil.rmtree(get_data_path(), ignore_errors=True)
+        shutil.rmtree(get_cache_path(), ignore_errors=True)
         os.makedirs(get_cache_path(), exist_ok=True)
         self._resolver = Resolver(self)
         self.compile()
