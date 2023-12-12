@@ -10,7 +10,6 @@ from ._fs import read_preferences, write_preferences
 from .exceptions import (
     AssetLookupError,
     NoMatchesError,
-    ResolveError,
     TooManyMatchesError,
     UnknownAssetError,
 )
@@ -82,6 +81,7 @@ class Resolver:
         # If there was no preference, or if the preference couldn't resolve, try resolving
         # without preference.
         resolved = self._get_resolved(asset_name, pkg, variant)
+
         if not resolved:
             raise NoMatchesError("Selection could not be resolved.", pkg, variant)
         elif len(resolved) > 1:
