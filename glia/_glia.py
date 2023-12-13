@@ -17,6 +17,7 @@ from ._fs import (
     create_preferences,
     get_cache_path,
     get_data_path,
+    get_local_pkg_path,
     get_neuron_mod_path,
     log,
     read_cache,
@@ -428,7 +429,8 @@ class Glia:
         os.makedirs(get_data_path(), exist_ok=True)
         clear_cache()
         create_preferences()
-        create_local_package()
+        if not get_local_pkg_path().exists():
+            create_local_package()
         # Environment cache path install
         shutil.rmtree(get_cache_path(), ignore_errors=True)
         os.makedirs(get_cache_path(), exist_ok=True)
