@@ -429,7 +429,7 @@ class Glia:
         os.makedirs(get_data_path(), exist_ok=True)
         clear_cache()
         create_preferences()
-        if not get_local_pkg_path().exists():
+        if not Path(get_local_pkg_path()).exists():
             create_local_package()
         # Environment cache path install
         shutil.rmtree(get_cache_path(), ignore_errors=True)

@@ -7,7 +7,7 @@ Manage a local NMODL library that's automatically compiled, loaded, and recompil
 whenever you change your NMODL code or simulator environment.
 """
 
-__version__ = "4.0.0b5"
+__version__ = "4.0.0b6"
 
 from ._fs import get_cache_path as _get_cache_path
 from ._glia import Glia, MechId
