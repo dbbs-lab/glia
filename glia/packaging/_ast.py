@@ -276,8 +276,8 @@ class NmodlWriter:
         block[0].statement_block.statements = statements
 
     def import_source(self, source: Path, dest: Path):
-        dest.mkdir(parents=True, exist_ok=True)
         mod_path = (dest / self._mod.relpath).resolve()
+        mod_path.parent.mkdir(parents=True, exist_ok=True)
         self.parse_source(source)
         self.update_source_ast()
         self.write(mod_path)
