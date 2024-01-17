@@ -192,7 +192,7 @@ def new():
     "-t",
     "--target",
     default=None,
-    type=click.Path(dir_okay=False, path_type=Path),
+    type=click.Path(dir_okay=True, path_type=Path),
     help="The path relative to the package root to place the mod file.",
 )
 @click.option("-v", "--variant", default="0", help="The asset variant")
@@ -203,7 +203,13 @@ def new():
     default=False,
     help="Add the NMODL asset to your local library",
 )
-def add(source, name, variant, overwrite, target, local):
+@click.option(
+    "-d",
+    "--dialect",
+    type=click.Choice(["arbor", "neuron"]),
+    help="Restrict the usage of this NMODL file to a specific dialect.",
+)
+def add(source, name, variant, overwrite, target, local, dialect):
     path = Path(get_local_pkg_path() if local else ".")
     if local and not path.exists():
         create_local_package()
@@ -211,10 +217,14 @@ def add(source, name, variant, overwrite, target, local):
     mod_path = pkg.get_mod_dir(target)
     if mod_path.is_dir():
         mod_path /= f"{name}__{variant}.mod"
+    if dialect and not target:
+        # If the target isn't manually specified, splice in the dialect path.
+        mod_path = mod_path.parent / dialect / mod_path.name
     if not overwrite and mod_path.exists():
         raise FileExistsError(f"Target mod file '{mod_path.resolve()}' already exists.")
     mod = pkg.get_mod_from_source(source, name=name, variant=variant)
     mod.relpath = pkg.get_rel_path(mod_path)
+    mod.dialect = dialect
     pkg.add_mod_file(source, mod)
 
 

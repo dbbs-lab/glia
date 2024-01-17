@@ -24,14 +24,8 @@ from ._fs import (
     update_cache,
 )
 from ._local import create_local_package
-from .assets import Catalogue, Mod, Package
-from .exceptions import (
-    CatalogueError,
-    CompileError,
-    LibraryError,
-    NeuronError,
-    PackageError,
-)
+from .assets import Mod, Package
+from .exceptions import CompileError, LibraryError, NeuronError, PackageError
 from .neuron import MechAccessor
 from .resolution import Resolver
 
@@ -102,38 +96,22 @@ class Glia:
                 log(f"Could not load package '{pkg_ptr.name}'", exc=e)
         return packages
 
-    @property
-    @lru_cache(maxsize=1)
-    def catalogues(self) -> typing.Mapping[str, Catalogue]:
-        catalogues = {}
-        eps = entry_points()
-        for pkg_ptr in eps.select(group="glia.catalogue"):
-            advert = pkg_ptr.load()
-            self.entry_points.append(pkg_ptr)
-            if advert.name in catalogues:
-                raise RuntimeError(
-                    f"Duplicate installations of `{advert.name}` catalogue:"
-                    + f"\n{catalogues[advert.name].FIXMEpath}"
-                    + f"\n{advert.FIXMEpath}"
-                )
-            catalogues[advert.name] = advert
-        return catalogues
-
-    def _get_catalogue(self, name) -> Catalogue:
-        try:
-            cat = self.catalogues[name]
-        except KeyError:
-            raise CatalogueError(f"Catalogue '{name}' not found.") from None
+    def get_package(self, name: str):
+        for pkg in self.packages:
+            if pkg.name == name:
+                return pkg
         else:
-            return cat
+            raise KeyError(f"Package '{name}' not found.")
 
     @_requires_install
-    def catalogue(self, name):
-        return self._get_catalogue(name).load()
+    def catalogue(self, name: str):
+        return self.get_package(name).load_catalogue()
 
     @_requires_install
     def build_catalogue(self, name, debug=False, verbose=False, gpu=None):
-        return self._get_catalogue(name).build(verbose=verbose, debug=debug, gpu=gpu)
+        return self.get_package(name).build_catalogue(
+            verbose=verbose, debug=debug, gpu=gpu
+        )
 
     def start(self):
         self.compile(check_cache=True)
@@ -233,7 +211,7 @@ class Glia:
         for pkg in self.packages:
             if pkg.builtin:
                 continue
-            assets.extend(pkg.mods)
+            assets.extend(pkg.get_mods(dialect="neuron"))
             # Update the package's hash to the current modfile contents
             cache_data["mod_hashes"][pkg.hash] = pkg.mod_hash
         return assets, cache_data

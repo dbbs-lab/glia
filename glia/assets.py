@@ -1,3 +1,4 @@
+import contextlib
 import os
 import shutil
 import subprocess
@@ -7,11 +8,14 @@ from tempfile import TemporaryDirectory, mkdtemp
 
 from . import _mpi
 from ._fs import get_cache_path, read_cache, update_cache
-from ._hash import get_directory_hash, get_package_hash, get_package_mods_hash
+from ._hash import get_package_hash, get_package_mods_hash
 from .exceptions import *
 
 if typing.TYPE_CHECKING:
     import arbor
+
+
+SupportedDialect = typing.Union[typing.Literal["arbor"], typing.Literal["neuron"]]
 
 
 class _ModList(list):
@@ -52,6 +56,10 @@ class Package:
         return self._name
 
     @property
+    def catalogue(self):
+        return Catalogue(self)
+
+    @property
     def hash(self):
         return get_package_hash(self)
 
@@ -63,6 +71,22 @@ class Package:
     def root(self):
         return self._root
 
+    def load_catalogue(self) -> "arbor.catalogue":
+        return self.catalogue.load()
+
+    def build_catalogue(self, *args, **kwargs) -> "arbor.catalogue":
+        return self.catalogue.build(*args, **kwargs)
+
+    def get_mods(self, dialect=None) -> list["Mod"]:
+        # Find common mods
+        mods = {mod.mod_name: mod for mod in self.mods if mod.dialect is None}
+        if dialect:
+            # Overwrite with dialect-specific mods
+            mods.update(
+                (mod.mod_name, mod) for mod in self.mods if mod.dialect == dialect
+            )
+        return [*mods.values()]
+
 
 class Mod:
     def __init__(
@@ -73,7 +97,7 @@ class Mod:
         variant="0",
         is_point_process=False,
         is_artificial_cell=False,
-        dialect: typing.Union[typing.Literal["arbor"], typing.Literal["neuron"]] = None,
+        dialect: SupportedDialect = None,
         builtin=False,
     ):
         self._pkg: typing.Optional[Package] = None
@@ -110,20 +134,18 @@ class Mod:
     def path(self) -> Path:
         return self.pkg.root / self.relpath
 
+    def copy_to(self, dir):
+        shutil.copy2(self.path, dir)
+
 
 class Catalogue:
-    def __init__(self, name, source_file):
-        self._name = name
-        self._source = os.path.dirname(source_file)
-        self._cache = get_cache_path(self._name, prefix="_arb")
+    def __init__(self, package: Package):
+        self._pkg = package
+        self._cache = get_cache_path(self.name, prefix="_arb")
 
     @property
     def name(self):
-        return self._name
-
-    @property
-    def source(self):
-        return self._source
+        return self._pkg.name
 
     def load(self) -> "arbor.catalogue":
         import arbor
@@ -133,16 +155,14 @@ class Catalogue:
         return arbor.load_catalogue(self._get_library_path())
 
     def _get_library_path(self):
-        return os.path.join(self._cache, f"{self._name}-catalogue.so")
+        return os.path.join(self._cache, f"{self.name}-catalogue.so")
 
     def is_fresh(self):
         if not os.path.exists(self._get_library_path()):
             return False
         try:
             cache_data = read_cache()
-            # Backward compatibility with old installs that
-            # have a JSON file without cat_hashes in it.
-            cached = cache_data.get("cat_hashes", dict()).get(self._name, None)
+            cached = cache_data.get("cat_hashes", {}).get(self.name, None)
             return cached == self._hash()
         except FileNotFoundError as _:
             return False
@@ -150,12 +170,8 @@ class Catalogue:
     def _hash(self):
         import arbor
 
-        source_hash = get_directory_hash(self.get_mod_path())
         arbor_hash = str(arbor.config())
-        return source_hash + arbor_hash
-
-    def get_mod_path(self):
-        return os.path.abspath(os.path.join(self._source, "mod"))
+        return self._pkg.mod_hash + arbor_hash
 
     def build(self, verbose=None, debug=False, gpu=None):
         # Turn verbosity on if debug is on, unless it's explicitly toggled off.
@@ -192,43 +208,54 @@ class Catalogue:
 
             tmp_dir = TmpDir
 
-        mod_path = self.get_mod_path()
-        with tmp_dir() as tmp:
-            pwd = os.getcwd()
-            os.chdir(tmp)
-            cmd = f"arbor-build-catalogue {self._name} {mod_path}"
-            try:
-                subprocess.run(
-                    cmd
-                    + (" --quiet" if not verbose else "")
-                    + (" --verbose" if verbose else "")
-                    + (" --debug" if debug else "")
-                    + (f" --gpu={gpu}" if gpu else ""),
-                    shell=True,
-                    check=True,
-                    capture_output=not verbose,
-                )
-            except subprocess.CalledProcessError as e:
-                msg_p = [f"ABC errored out with exitcode {e.returncode}"]
-                if verbose:
-                    msg_p += ["Check log above for error."]
-                else:
-                    msg_p += [
-                        f"Command: {cmd}\n---- ABC output ----",
-                        e.stdout.decode(),
-                        "---- ABC error  ----",
-                        e.stderr.decode(),
-                    ]
-                msg = "\n\n".join(msg_p)
-                raise BuildCatalogueError(msg) from None
-            os.makedirs(self._cache, exist_ok=True)
-            shutil.copy2(f"{self._name}-catalogue.so", self._cache)
-            os.chdir(pwd)
-            if debug:
-                print(f"Debug copy of catalogue in '{tmp}'")
+        with self.assemble_mod_dir() as mod_path:
+            with tmp_dir() as tmp:
+                print("MODS?", os.listdir(mod_path), mod_path, tmp)
+                pwd = os.getcwd()
+                os.chdir(tmp)
+                cmd = f"arbor-build-catalogue {self.name} {mod_path}"
+                try:
+                    subprocess.run(
+                        cmd
+                        + (" --quiet" if not verbose else "")
+                        + (" --verbose" if verbose else "")
+                        + (" --debug" if debug else "")
+                        + (f" --gpu={gpu}" if gpu else ""),
+                        shell=True,
+                        check=True,
+                        capture_output=not verbose,
+                    )
+                except subprocess.CalledProcessError as e:
+                    msg_p = [f"ABC errored out with exitcode {e.returncode}"]
+                    if verbose:
+                        msg_p += ["Check log above for error."]
+                    else:
+                        msg_p += [
+                            f"Command: {cmd}\n---- ABC output ----",
+                            e.stdout.decode(),
+                            "---- ABC error  ----",
+                            e.stderr.decode(),
+                        ]
+                    msg = "\n\n".join(msg_p)
+                    raise BuildCatalogueError(msg) from None
+        os.makedirs(self._cache, exist_ok=True)
+        shutil.copy2(f"{self._name}-catalogue.so", self._cache)
+        os.chdir(pwd)
+        if debug:
+            print(f"Debug copy of catalogue in '{tmp}'")
         # Cache directory hash of current mod files so we only rebuild on source code
         # changes.
         cache_data = read_cache()
         cat_hashes = cache_data.setdefault("cat_hashes", dict())
         cat_hashes[self._name] = self._hash()
         update_cache(cache_data)
+
+    @contextlib.contextmanager
+    def assemble_mod_dir(self):
+        with TemporaryDirectory() as tmpdir:
+            for mod in self._pkg.get_mods(dialect="arbor"):
+                outname = mod.asset_name
+                if mod.variant:
+                    outname += "_" + mod.variant
+                mod.copy_to(tmpdir, rename=outname)
+            yield tmpdir
