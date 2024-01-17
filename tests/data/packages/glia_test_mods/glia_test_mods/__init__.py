@@ -12,15 +12,20 @@ from pathlib import Path
 from glia import Mod, Package
 
 __version__ = "1.0.0"
-
-
 package = Package(
     "glia_test_mods",
     Path(__file__).resolve().parent,
     mods=[
-        Mod("mods/Na__0.mod", "Na"),
-        Mod("mods/AMPA__0.mod", "AMPA", is_point_process=True),
-        Mod("mods/AMPA__1.mod", "AMPA", variant="1", is_point_process=True),
-        Mod("mods/Na__t.mod", "Na", variant="t"),
+        Mod("mods/Na__0.mod", "Na", dialect="neuron"),
+        Mod("mods/AMPA__0.mod", "AMPA", is_point_process=True, dialect="neuron"),
+        Mod(
+            "mods/AMPA__1.mod",
+            "AMPA",
+            variant="1",
+            is_point_process=True,
+            dialect="neuron",
+        ),
+        Mod("mods/Na__t.mod", "Na", variant="t", dialect="neuron"),
+        Mod("mods/arbor/Cav2_1.mod", "Cav2_1", dialect="arbor"),
     ],
 )
