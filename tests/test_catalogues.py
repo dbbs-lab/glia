@@ -2,7 +2,7 @@ import sys
 import unittest
 
 
-@unittest.skipIf(sys.platform != "linux", "Arbor is Linux only.")
+@unittest.skipIf(sys.platform == "win32", "Skip Arbor on windows")
 class TestCatalogues(unittest.TestCase):
     """
     Check if catalogues can be built.
