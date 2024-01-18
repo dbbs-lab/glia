@@ -5,6 +5,7 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+from click import ClickException
 from click.testing import CliRunner
 
 import glia._cli
@@ -19,7 +20,11 @@ def run_cli_command(command, xfail=False, **kwargs):
     runner = CliRunner()
     with runner.isolated_filesystem():
         result = runner.invoke(glia._cli.glia, command, **kwargs)
-        if not xfail and result.exception:
+        if (
+            not xfail
+            and result.exception
+            and not isinstance(result.exception, (SystemExit, ClickException))
+        ):
             raise result.exception
         return result
 
