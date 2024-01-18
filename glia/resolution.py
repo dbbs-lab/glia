@@ -52,6 +52,8 @@ class Resolver:
         self._reverse_lookup = {}
         for pkg in packages:
             for mod in pkg.mods:
+                if mod.dialect is not None and mod.dialect != "neuron":
+                    continue
                 name = mod.asset_name
                 if not name in self.index:
                     self.index[name] = IndexEntry(name)
