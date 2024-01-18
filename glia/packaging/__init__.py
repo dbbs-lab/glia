@@ -5,7 +5,7 @@ from pathlib import Path
 import toml
 from black import find_project_root
 
-from ..assets import Mod
+from ..assets import Mod, SupportedDialect
 from ..exceptions import PackageError, PackageFileError, PackageProjectError
 from ._ast import NmodlWriter, PackageTransformer, get_package_transformer
 
@@ -107,7 +107,7 @@ class PackageManager:
         else:
             dest = self.get_package_path()
             writer = NmodlWriter(mod)
-            writer.import_source(source, dest)
+            writer.import_source(source, dest, dialect=mod.dialect)
             transformer.add_mod(mod)
             transformer.write_in_place()
 
@@ -130,13 +130,19 @@ class PackageManager:
     def get_package_shim(self):
         return self._get_transformer().get_package_shim()
 
-    def get_mod_from_source(self, source: Path, name: str, variant: str = "0"):
+    def get_mod_from_source(
+        self,
+        source: Path,
+        name: str,
+        variant: str = "0",
+        dialect: SupportedDialect = None,
+    ):
         mod = Mod(
             str(self.get_rel_path() / f"{name}__{variant}.mod"), name, variant=variant
         )
         mod.set_package(self.get_package_shim())
         writer = NmodlWriter(mod)
-        writer.parse_source(source)
+        writer.parse_source(source, dialect=dialect)
         writer.extract_source_info()
         return mod
 

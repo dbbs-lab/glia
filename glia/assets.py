@@ -266,5 +266,7 @@ class Catalogue:
                 # `arbor-build-catalogue` needs filename to match suffix statement.
                 # See https://github.com/arbor-sim/arbor/issues/2250
                 writer.update_suffix_ast(mod.arbor_name)
-                writer.write((Path(tmpdir) / mod.arbor_name).with_suffix(".mod"))
+                writer.write(
+                    (Path(tmpdir) / mod.arbor_name).with_suffix(".mod"), dialect="arbor"
+                )
             yield tmpdir

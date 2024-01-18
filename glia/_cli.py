@@ -222,7 +222,7 @@ def add(source, name, variant, overwrite, target, local, dialect):
         mod_path = mod_path.parent / dialect / mod_path.name
     if not overwrite and mod_path.exists():
         raise FileExistsError(f"Target mod file '{mod_path.resolve()}' already exists.")
-    mod = pkg.get_mod_from_source(source, name=name, variant=variant)
+    mod = pkg.get_mod_from_source(source, name=name, variant=variant, dialect=dialect)
     mod.relpath = pkg.get_rel_path(mod_path)
     mod.dialect = dialect
     pkg.add_mod_file(source, mod)

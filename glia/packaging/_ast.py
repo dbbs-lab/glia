@@ -1,13 +1,16 @@
+import abc
 import ast
 import inspect
 import itertools
+import re
 import typing
+from collections import defaultdict
 from copy import copy
 from pathlib import Path
 
 import black
 
-from ..assets import Mod, Package
+from ..assets import Mod, Package, SupportedDialect
 from ..exceptions import ModSourceError, PackageApiError, PackageFileError
 
 if typing.TYPE_CHECKING:
@@ -249,8 +252,11 @@ class NmodlWriter:
                 "please see https://github.com/BlueBrain/nmodl/issues/1112"
             ) from e
 
-    def parse_source(self, source: Path):
-        self._source = self.nmodl.NmodlDriver().parse_file(str(source.resolve()))
+    def parse_source(self, source: Path, dialect: SupportedDialect = None):
+        text = source.read_text()
+        for patch in get_patches(dialect):
+            text = patch.common(text)
+        self._source = self.nmodl.NmodlDriver().parse_string(text)
 
     def update_suffix_ast(self, name=None):
         if name is None:
@@ -277,16 +283,21 @@ class NmodlWriter:
         )
         block[0].statement_block.statements = statements
 
-    def import_source(self, source: Path, dest: Path):
+    def import_source(self, source: Path, dest: Path, dialect: SupportedDialect = None):
         mod_path = (dest / self._mod.relpath).resolve()
         mod_path.parent.mkdir(parents=True, exist_ok=True)
-        self.parse_source(source)
+        # Import dialect source
+        self.parse_source(source, dialect=dialect)
         self.update_suffix_ast()
+        # Write common source
         self.write(mod_path)
 
-    def write(self, target: Path):
+    def write(self, target: Path, dialect: SupportedDialect = None):
         self._check_source()
-        target.write_text(self.nmodl.to_nmodl(self._source))
+        text = self.nmodl.to_nmodl(self._source)
+        for patch in get_patches(dialect):
+            text = patch.dialect(text)
+        target.write_text(text)
 
     def extract_source_info(self):
         self._check_source()
@@ -307,3 +318,39 @@ class NmodlWriter:
     def _check_source(self):
         if self._source is None:
             raise RuntimeError(f"No nmodl source set for {self._mod}")
+
+
+_patches = defaultdict(list)
+
+
+class DialectPatch(abc.ABC):
+    @abc.abstractmethod
+    def dialect(self, common_text: str) -> str:
+        pass
+
+    @abc.abstractmethod
+    def common(self, dialect_text: str) -> str:
+        pass
+
+    def __init_subclass__(cls, dialect: SupportedDialect, **kwargs):
+        super().__init_subclass__(**kwargs)
+        register_patch(dialect, cls())
+
+
+def register_patch(dialect: SupportedDialect, patch: DialectPatch):
+    _patches[dialect].append(patch)
+
+
+def get_patches(dialect: SupportedDialect) -> list[DialectPatch]:
+    return _patches[dialect]
+
+
+class UniDirEqPatch(DialectPatch, dialect="arbor"):
+    dialect_regex = re.compile(r"~\s*(\w+)\s*<->\s*\(\s*0\s*,\s*(.+)\)")
+    common_regex = re.compile(r"~\s*(\w+)\s*<<\s*\((.+)\)")
+
+    def dialect(self, common_text: str) -> str:
+        return self.common_regex.sub(r"~ \1 <-> (0, \2)", common_text)
+
+    def common(self, dialect_text: str) -> str:
+        return self.dialect_regex.sub(r"~ \1 << (\2)", dialect_text)
