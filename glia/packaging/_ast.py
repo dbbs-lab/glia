@@ -252,7 +252,9 @@ class NmodlWriter:
     def parse_source(self, source: Path):
         self._source = self.nmodl.NmodlDriver().parse_file(str(source.resolve()))
 
-    def update_source_ast(self):
+    def update_suffix_ast(self, name=None):
+        if name is None:
+            name = self._mod.mod_name
         self._check_source()
         visitor = self.nmodl.visitor.AstLookupVisitor()
         block = visitor.lookup(self._source, self.nmodl.ast.AstNodeType.NEURON_BLOCK)
@@ -260,17 +262,17 @@ class NmodlWriter:
             st for st in block[0].statement_block.statements if not st.is_suffix()
         ]
         if self._mod.is_artificial_cell:
-            name = "ARTIFICIAL_CELL"
+            suffix = "ARTIFICIAL_CELL"
         elif self._mod.is_point_process:
-            name = "POINT_PROCESS"
+            suffix = "POINT_PROCESS"
         else:
-            name = "SUFFIX"
+            suffix = "SUFFIX"
 
         statements.insert(
             0,
             self.nmodl.ast.Suffix(
+                self.nmodl.ast.Name(self.nmodl.ast.String(suffix)),
                 self.nmodl.ast.Name(self.nmodl.ast.String(name)),
-                self.nmodl.ast.Name(self.nmodl.ast.String(self._mod.mod_name)),
             ),
         )
         block[0].statement_block.statements = statements
@@ -279,7 +281,7 @@ class NmodlWriter:
         mod_path = (dest / self._mod.relpath).resolve()
         mod_path.parent.mkdir(parents=True, exist_ok=True)
         self.parse_source(source)
-        self.update_source_ast()
+        self.update_suffix_ast()
         self.write(mod_path)
 
     def write(self, target: Path):

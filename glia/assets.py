@@ -131,11 +131,15 @@ class Mod:
         return f"glia__{self.pkg_name}__{self.asset_name}__{self.variant}"
 
     @property
+    def arbor_name(self):
+        name = self.asset_name
+        if self.variant:
+            name += "__" + self.variant
+        return name
+
+    @property
     def path(self) -> Path:
         return self.pkg.root / self.relpath
-
-    def copy_to(self, dir):
-        shutil.copy2(self.path, dir)
 
 
 class Catalogue:
@@ -208,13 +212,12 @@ class Catalogue:
 
             tmp_dir = TmpDir
 
-        with self.assemble_mod_dir() as mod_path:
+        with self.assemble_arbor_mod_dir() as mod_path:
             with tmp_dir() as tmp:
-                print("MODS?", os.listdir(mod_path), mod_path, tmp)
                 pwd = os.getcwd()
                 os.chdir(tmp)
-                cmd = f"arbor-build-catalogue {self.name} {mod_path}"
                 try:
+                    cmd = f"arbor-build-catalogue {self.name} {mod_path}"
                     subprocess.run(
                         cmd
                         + (" --quiet" if not verbose else "")
@@ -238,24 +241,30 @@ class Catalogue:
                         ]
                     msg = "\n\n".join(msg_p)
                     raise BuildCatalogueError(msg) from None
-        os.makedirs(self._cache, exist_ok=True)
-        shutil.copy2(f"{self._name}-catalogue.so", self._cache)
-        os.chdir(pwd)
+                else:
+                    os.makedirs(self._cache, exist_ok=True)
+                    shutil.copy2(f"{self.name}-catalogue.so", self._cache)
+                finally:
+                    os.chdir(pwd)
         if debug:
             print(f"Debug copy of catalogue in '{tmp}'")
         # Cache directory hash of current mod files so we only rebuild on source code
         # changes.
         cache_data = read_cache()
         cat_hashes = cache_data.setdefault("cat_hashes", dict())
-        cat_hashes[self._name] = self._hash()
+        cat_hashes[self.name] = self._hash()
         update_cache(cache_data)
 
     @contextlib.contextmanager
-    def assemble_mod_dir(self):
+    def assemble_arbor_mod_dir(self):
+        from .packaging import NmodlWriter
+
         with TemporaryDirectory() as tmpdir:
             for mod in self._pkg.get_mods(dialect="arbor"):
-                outname = mod.asset_name
-                if mod.variant:
-                    outname += "_" + mod.variant
-                mod.copy_to(tmpdir, rename=outname)
+                writer = NmodlWriter(mod)
+                writer.parse_source(mod.path)
+                # `arbor-build-catalogue` needs filename to match suffix statement.
+                # See https://github.com/arbor-sim/arbor/issues/2250
+                writer.update_suffix_ast(mod.arbor_name)
+                writer.write((Path(tmpdir) / mod.arbor_name).with_suffix(".mod"))
             yield tmpdir
