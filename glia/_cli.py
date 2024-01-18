@@ -31,7 +31,7 @@ def compile():
             ),
         )
         click.echo("Testing assets ...")
-    test(_manager.resolver.index.keys(), standalone_mode=False)
+    test(_manager.resolver.index.keys())
 
 
 @glia.command("list", help="List installed components")
