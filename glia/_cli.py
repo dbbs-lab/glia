@@ -6,6 +6,7 @@ import click
 from . import _manager, _mpi
 from ._fs import clear_cache, get_cache_path, get_local_pkg_path
 from ._local import create_local_package
+from .assets import ModName
 from .exceptions import *
 from .packaging import PackageManager
 
@@ -175,6 +176,21 @@ def new():
     )
 
 
+def _guess_name(ctx, param, value):
+    if value == param.default:
+        try:
+            name = ModName.parse_path(ctx.params["source"])
+            if param.name == "name":
+                value = name.asset
+            elif param.name == "variant":
+                value = name.variant
+            else:
+                raise RuntimeError("_guess_name used for wrong option.")
+        except ValueError:
+            value = click.prompt(param.name.title(), type=str)
+    return value
+
+
 @pkg.command(help="Add a mod file to the current package.")
 @click.argument(
     "source",
@@ -187,7 +203,7 @@ def new():
     default=False,
     help="Whether to overwrite if NMODL file exists at target location",
 )
-@click.option("-n", "--name", prompt=True, required=True, help="The asset name")
+@click.option("-n", "--name", type=str, callback=_guess_name, help="The asset name")
 @click.option(
     "-t",
     "--target",
@@ -195,7 +211,14 @@ def new():
     type=click.Path(dir_okay=True, path_type=Path),
     help="The path relative to the package root to place the mod file.",
 )
-@click.option("-v", "--variant", default="0", help="The asset variant")
+@click.option(
+    "-v",
+    "--variant",
+    default="0",
+    type=str,
+    callback=_guess_name,
+    help="The asset variant",
+)
 @click.option(
     "-l",
     "--local",
@@ -204,10 +227,18 @@ def new():
     help="Add the NMODL asset to your local library",
 )
 @click.option(
-    "-d",
-    "--dialect",
-    type=click.Choice(["arbor", "neuron"]),
-    help="Restrict the usage of this NMODL file to a specific dialect.",
+    "-a",
+    "--arbor",
+    "dialect",
+    flag_value="arbor",
+    help="Restrict the usage of this NMODL file to the Arbor dialect.",
+)
+@click.option(
+    "-n",
+    "--neuron",
+    "dialect",
+    flag_value="neuron",
+    help="Restrict the usage of this NMODL file to the NEURON dialect.",
 )
 def add(source, name, variant, overwrite, target, local, dialect):
     path = Path(get_local_pkg_path() if local else ".")
