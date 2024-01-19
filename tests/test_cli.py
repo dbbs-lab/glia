@@ -138,7 +138,7 @@ class TestPackagingCLI(unittest.TestCase):
             self.assertEqual(0, result.exit_code)
 
     def test_add_mod(self):
-        mod_path = Path(__file__).parent / "data" / "mods" / "Na.mod"
+        mod_path = Path(__file__).parent / "data" / "mods" / "Na__0.mod"
         mod_source = mod_path.read_text()
         assert "SUFFIX Na\n" in mod_path.read_text(), "Source of Na was mutated"
         runner = CliRunner()
@@ -147,13 +147,7 @@ class TestPackagingCLI(unittest.TestCase):
             os.chdir("./glia_package")
             result = runner.invoke(
                 glia._cli.glia,
-                [
-                    "pkg",
-                    "add",
-                    str(mod_path),
-                    "--name",
-                    "Na",
-                ],
+                ["pkg", "add", str(mod_path)],
             )
 
             self.assertEqual(0, result.exit_code)
@@ -183,7 +177,7 @@ class TestPackagingCLI(unittest.TestCase):
             )
 
     def test_add_synapse(self):
-        mod_path = Path(__file__).parent / "data" / "mods" / "AMPA.mod"
+        mod_path = Path(__file__).parent / "data" / "mods" / "AMPA__0.mod"
         mod_source = mod_path.read_text()
         assert (
             "POINT_PROCESS AMPA\n" in mod_path.read_text()
@@ -198,8 +192,6 @@ class TestPackagingCLI(unittest.TestCase):
                     "pkg",
                     "add",
                     str(mod_path),
-                    "--name",
-                    "AMPA",
                 ],
             )
 
