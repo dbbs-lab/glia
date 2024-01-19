@@ -346,6 +346,10 @@ def get_patches(dialect: SupportedDialect) -> list[DialectPatch]:
 
 
 class UniDirEqPatch(DialectPatch, dialect="arbor"):
+    """
+    Replace arbor's `a <-> (0, f)` with NMODL's `a << f`.
+    """
+
     dialect_regex = re.compile(r"~\s*(\w+)\s*<->\s*\(\s*0\s*,\s*(.+)\)")
     common_regex = re.compile(r"~\s*(\w+)\s*<<\s*\((.+)\)")
 
@@ -354,3 +358,17 @@ class UniDirEqPatch(DialectPatch, dialect="arbor"):
 
     def common(self, dialect_text: str) -> str:
         return self.dialect_regex.sub(r"~ \1 << (\2)", dialect_text)
+
+
+class IndependentPatch(DialectPatch, dialect="neuron"):
+    """
+    Strip INDEPENDENT blocks: does nothing and NMODL parses them incorrectly.
+    """
+
+    regex = re.compile(r"INDEPENDENT\s*\{.+?\}", re.DOTALL)
+
+    def dialect(self, common_text: str) -> str:
+        return common_text
+
+    def common(self, dialect_text: str) -> str:
+        return self.regex.sub("", dialect_text)
