@@ -122,24 +122,69 @@ class Mod:
 
     @property
     def mech_id(self):
-        return (self.asset_name, self.variant, self.pkg_name)
+        return ModName(self.pkg_name, self.asset_name, self.variant).mech_id
 
     @property
     def mod_name(self):
         if self.builtin:
             return self.asset_name
-        return f"glia__{self.pkg_name}__{self.asset_name}__{self.variant}"
+        return ModName(self.pkg_name, self.asset_name, self.variant).full_mod_name
 
     @property
     def arbor_name(self):
-        name = self.asset_name
-        if self.variant:
-            name += "__" + self.variant
-        return name
+        return ModName(self.pkg_name, self.asset_name, self.variant).arbor_mod_name
 
     @property
     def path(self) -> Path:
         return self.pkg.root / self.relpath
+
+
+class ModName:
+    def __init__(self, pkg_name: str, asset: str, variant: str):
+        self.pkg = pkg_name
+        self.asset = asset
+        self.variant = variant
+
+    @property
+    def full_mod_name(self):
+        if self.pkg is None:
+            raise ValueError("Missing pkg info for mod name.")
+        else:
+            return f"glia__{self.pkg}__{self.asset}__{self.variant}"
+
+    @property
+    def short_mod_name(self):
+        return f"{self.asset}__{self.variant}"
+
+    @property
+    def arbor_mod_name(self):
+        name = self.asset
+        if self.variant:
+            name += "_" + self.variant
+        return name
+
+    @classmethod
+    def parse(cls, name: str):
+        name_parts = name.split("__")
+        if len(name_parts) == 2:
+            return cls(None, *name_parts)
+        elif len(name_parts) == 4:
+            return cls(*name_parts[1:])
+        else:
+            raise ValueError(f"Unparsable mod name '{name}'.")
+
+    @classmethod
+    def parse_path(cls, path: str):
+        return cls.parse(Path(path).stem)
+
+    @property
+    def mech_id(self):
+        if not self.variant:
+            return self.asset
+        elif not self.pkg:
+            return (self.asset, self.variant)
+        else:
+            return (self.asset, self.variant, self.pkg)
 
 
 class Catalogue:
