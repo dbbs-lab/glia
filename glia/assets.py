@@ -159,7 +159,7 @@ class ModName:
     @property
     def arbor_mod_name(self):
         name = self.asset
-        if self.variant:
+        if self.variant and self.variant != "0":
             name += "_" + self.variant
         return name
 
