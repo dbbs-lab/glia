@@ -1,8 +1,12 @@
+import typing
 import weakref
+
+if typing.TYPE_CHECKING:
+    from .assets import Mod
 
 
 class MechAccessor:
-    def __init__(self, section, mod, point_process=None):
+    def __init__(self, section, mod: "Mod", point_process=None):
         self._section_name = section.hname()
         self._section = weakref.proxy(section)
         self._mod = mod
@@ -76,7 +80,9 @@ class MechAccessor:
         mod = self._mod.mod_name
         if self._pp is not None:
             if param not in self._pp.parameters:
-                raise AttributeError(f"{self} has no parameter '{param}'")
+                raise AttributeError(
+                    f"Point process {self._mod.mod_name} has no parameter '{param}'"
+                )
             return setattr(self._pp, param, value)
         try:
             if x is None:
