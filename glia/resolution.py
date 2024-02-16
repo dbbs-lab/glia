@@ -85,7 +85,11 @@ class Resolver:
         resolved = self._get_resolved(asset_name, pkg, variant)
 
         if not resolved:
-            raise NoMatchesError("Selection could not be resolved.", pkg, variant)
+            raise NoMatchesError(
+                f"Selection {pkg}.{asset_name}.{variant} could not be resolved.",
+                pkg,
+                variant,
+            )
         elif len(resolved) > 1:
             return self._resolve_multi(resolved, asset_name, pkg, variant).mod_name
         else:
