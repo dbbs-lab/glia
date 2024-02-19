@@ -190,7 +190,7 @@ class ModName:
 class Catalogue:
     def __init__(self, package: Package):
         self._pkg = package
-        self._cache = get_cache_path(self.name, prefix="_arb")
+        self._cache = get_cache_path(self.name, prefix="arb_")
 
     @property
     def name(self):

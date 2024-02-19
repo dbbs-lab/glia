@@ -1,6 +1,7 @@
 import datetime
 import json
 import os
+import sys
 import typing
 import warnings
 from pathlib import Path
@@ -47,7 +48,7 @@ def get_glia_path():
 
 
 def get_cache_hash(prefix=""):
-    return prefix + hash_path(get_glia_path())[:8]
+    return prefix + hash_path(get_glia_path())[:8] + hash_path(sys.prefix)[:8]
 
 
 def get_cache_path(*subfolders, prefix=""):
