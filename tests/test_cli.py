@@ -151,7 +151,9 @@ class TestPackagingCLI(unittest.TestCase):
             )
 
             self.assertEqual(0, result.exit_code)
-            self.assertEqual([".gitkeep", "Na__0.mod"], os.listdir("glia_package/mods"))
+            self.assertEqual(
+                [".gitkeep", "Na__0.mod"], sorted(os.listdir("glia_package/mods"))
+            )
             package = import_tmp_package("glia_package")
             self.assertEqual(Package, type(package), "Broken package declaration")
             self.assertEqual(1, len(package.mods), "Should have added mod")

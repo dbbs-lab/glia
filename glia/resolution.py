@@ -3,7 +3,6 @@
     requested from the Glia library.
 """
 
-
 from contextlib import contextmanager
 
 from ._fs import read_preferences, write_preferences
