@@ -54,7 +54,7 @@ dev = [
     "nmodl-glia[test, docs]",
     "pre-commit~=3.5",
     "isort~=5.12",
-    "bump2version~=1.0"
+    "bump-my-version~=1.0"
 ]
 
 [tool.black]
