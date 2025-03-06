@@ -14,7 +14,7 @@ dependencies= [
     "appdirs~=1.0",
     "errr~=1.2",
     "cookiecutter~=2.0",
-    "black~=24.0",
+    "black>=24.0",
     "toml~=0.10",
     "nmodl~=0.5;sys_platform != 'win32'",
     "importlib_metadata~=6.5"
@@ -54,6 +54,7 @@ dev = [
     "nmodl-glia[test, docs]",
     "pre-commit~=3.5",
     "isort~=5.12",
+    "bump2version~=1.0"
 ]
 
 [tool.black]
